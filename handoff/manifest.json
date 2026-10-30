@@ -1,0 +1,78 @@
+{
+  "base_commit": "27d0bfa893cb82f2ef76efc4e47b6903e5f3d090",
+  "order": [
+    {
+      "person": "Сүгірбай А.Ж.",
+      "folder": "01-sugirbay",
+      "branch": "feature/base-home",
+      "files": [
+        ".gitignore",
+        "app/careers/[slug]/page.tsx",
+        "app/careers/page.tsx",
+        "app/globals.css",
+        "app/layout.tsx",
+        "app/not-found.tsx",
+        "app/page.tsx",
+        "app/roadmap/[slug]/page.tsx",
+        "components/career-detail.tsx",
+        "components/catalog.tsx",
+        "components/home.tsx",
+        "components/motion.tsx",
+        "components/navigation.tsx",
+        "components/ui.tsx",
+        "components/workspace-shell.tsx",
+        "lib/data.ts",
+        "lib/use-browser-storage.ts",
+        "lib/use-workspace.ts",
+        "lib/workspace.ts",
+        "next.config.ts",
+        "package-lock.json",
+        "package.json",
+        "postcss.config.mjs"
+      ]
+    },
+    {
+      "person": "Орунбасар А.И.",
+      "folder": "02-orunbasar",
+      "branch": "feature/editor-techtest",
+      "files": [
+        "app/employer/[[...slug]]/page.tsx",
+        "app/posts/new/page.tsx",
+        "app/quiz-interests/page.tsx",
+        "app/stats/page.tsx",
+        "app/tests/[[...slug]]/page.tsx",
+        "components/interest-quiz.tsx",
+        "components/jobs.tsx",
+        "components/post-editor.tsx",
+        "components/tech-test.tsx"
+      ]
+    },
+    {
+      "person": "Траймбетқызы А.",
+      "folder": "03-traimbetkyzy",
+      "branch": "feature/dashboard-jobs",
+      "files": [
+        "app/dashboard/page.tsx",
+        "app/jobs/[[...slug]]/page.tsx",
+        "components/workspace-dashboard.tsx"
+      ]
+    },
+    {
+      "person": "Сәмбет Ж.Қ.",
+      "folder": "04-sambet",
+      "branch": "feature/post-view-qa",
+      "files": [
+        ".github/workflows/ui.yml",
+        "README.md",
+        "app/posts/[id]/page.tsx",
+        "app/profile/page.tsx",
+        "components/post-view.tsx",
+        "components/workspace.tsx",
+        "docs/TEAM_TASKS.md",
+        "docs/UI.md",
+        "playwright.config.ts",
+        "tests/ui.spec.ts"
+      ]
+    }
+  ]
+}
