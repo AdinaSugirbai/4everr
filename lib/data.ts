@@ -6,6 +6,7 @@ export const tests = [
   { topic: "Java", level: "Junior", score: 41, time: "29:55", date: "17 қазан" },
   { topic: "JavaScript", level: "Junior", score: 52, time: "27:30", date: "9 қазан" },
   { topic: "HTML", level: "Junior", score: 88, time: "12:20", date: "2 қазан" },
+  { topic: "Java", level: "Middle", score: 73, time: "26:15", date: "30 қазан" },
 ];
 export type AppStatus = "NEW" | "VIEWED" | "INVITED" | "REJECTED";
 export const statusUi: Record<AppStatus, { label: string; cls: string }> = {
