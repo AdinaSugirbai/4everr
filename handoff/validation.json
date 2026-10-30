@@ -1,0 +1,30 @@
+[
+  {
+    "stage": 1,
+    "person": "Сүгірбай А.Ж.",
+    "lint": "passed",
+    "typecheck": "passed",
+    "build": "passed"
+  },
+  {
+    "stage": 2,
+    "person": "Орунбасар А.И.",
+    "lint": "passed",
+    "typecheck": "passed",
+    "build": "passed"
+  },
+  {
+    "stage": 3,
+    "person": "Траймбетқызы А.",
+    "lint": "passed",
+    "typecheck": "passed",
+    "build": "passed"
+  },
+  {
+    "stage": 4,
+    "person": "Сәмбет Ж.Қ.",
+    "lint": "passed",
+    "typecheck": "passed",
+    "build": "passed"
+  }
+]
