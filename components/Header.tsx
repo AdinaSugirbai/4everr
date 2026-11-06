@@ -1,4 +1,5 @@
 "use client";
+import ThemeToggle from "./ThemeToggle";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
@@ -20,7 +21,7 @@ export default function Header() {
           ))}
         </nav>
         <div className="ml-auto flex items-center gap-2">
-          <span className="hidden sm:block text-sm text-mute">Әсел Ж.</span>
+          <ThemeToggle /> <span className="hidden sm:block text-sm text-mute">Әсел Ж.</span>
           <span className="w-9 h-9 rounded-full bg-brand text-onb grid place-items-center text-sm font-bold">ӘЖ</span>
         </div>
       </div>
