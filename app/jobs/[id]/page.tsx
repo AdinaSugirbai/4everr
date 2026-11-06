@@ -1,6 +1,7 @@
 import Link from "next/link";
 import ApplyPanel from "@/components/ApplyPanel";
 import TiltCard from "@/components/TiltCard";
+ import VacancySearch from "@/components/VacancySearch";
 
 const list = (a: string[]) => <ul className="list-disc pl-5 text-mute grid gap-1">{a.map((x) => <li key={x}>{x}</li>)}</ul>;
 
@@ -23,11 +24,7 @@ export default async function JobPage({ params }: { params: Promise<{ id: string
             <section><h2 className="font-bold text-lg mb-2">Талаптар</h2>{list(["HTML, CSS, JavaScript негіздері", "Git-пен жұмыс (оқу жобалары да болады)", "Ағылшын құжаттамасын оқи алу"])}</section>
             <section><h2 className="font-bold text-lg mb-2">Дағдылар</h2><div className="flex flex-wrap gap-2"><span className="chip c-ok">HTML ✓</span><span className="chip c-ok">CSS ✓</span><span className="chip c-w">JavaScript · тест 64%</span><span className="chip c-b">React · жоқ</span></div></section>
           </div>
-          <div className="card p-6"><h2 className="font-bold text-lg mb-3">Ұқсас вакансиялар</h2>
-            <div className="grid sm:grid-cols-2 gap-3">
-              <Link href="/jobs/2" className="border border-line rounded-xl p-4 hover:bg-soft"><p className="font-semibold">React тағылымдама</p><p className="text-sm text-mute">Chocofamily · қашықтан</p></Link>
-              <Link href="/jobs/3" className="border border-line rounded-xl p-4 hover:bg-soft"><p className="font-semibold">Web әзірлеуші (Junior)</p><p className="text-sm text-mute">Technodom · Астана</p></Link>
-            </div></div>
+          <VacancySearch />
         </div>
         <ApplyPanel match={82} />
       </div>
