@@ -18,7 +18,7 @@ export default function Header() {
         <Link href="/profile" className="font-bold text-lg tracking-tight text-brand">4everr</Link>
         <nav className="flex gap-1 text-sm overflow-x-auto" aria-label="Негізгі навигация">
           {links.map((l) => (
-            <Link key={l.href} href={l.href} className={px-3 py-2 rounded-lg hover:bg-soft whitespace-nowrap ${path.startsWith(l.href.split("/").slice(0, 3).join("/")) ? "bg-soft" : ""}}>{l.label}</Link>
+            <Link key={l.href} href={l.href} className={"px-3 py-2 rounded-lg hover:bg-soft whitespace-nowrap " + (path.startsWith(l.href.split("/").slice(0, 3).join("/")) ? "bg-soft" : "")}>{l.label}</Link>
           ))}
         </nav>
         <div className="ml-auto flex items-center gap-2">
