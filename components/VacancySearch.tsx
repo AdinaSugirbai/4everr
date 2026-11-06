@@ -6,7 +6,7 @@ import { vacancies } from "@/lib/data";
 export default function VacancySearch() {
   const [q, setQ] = useState("");
   const s = q.trim().toLowerCase();
-  const list = vacancies.filter((v) => ${v.title} ${v.company} ${v.city} ${v.level}.toLowerCase().includes(s));
+  const list = vacancies.filter((v) => [v.title, v.company, v.city, v.level].join(" ").toLowerCase().includes(s));
 
   return (
     <div className="card p-6">
@@ -14,7 +14,7 @@ export default function VacancySearch() {
       <input className="inp" placeholder="Атауы, компания немесе қала..." value={q} onChange={(e) => setQ(e.target.value)} aria-label="Вакансия іздеу" />
       <div className="mt-4 grid sm:grid-cols-2 gap-3">
         {list.map((v) => (
-          <Link key={v.id} href={/jobs/${v.id}} className="border border-line rounded-xl p-4 hover:bg-soft">
+          <Link key={v.id} href={"/jobs/" + v.id} className="border border-line rounded-xl p-4 hover:bg-soft">
             <p className="font-semibold">{v.title}</p>
             <p className="text-sm text-mute">{v.company} · {v.city} · {v.level}</p>
           </Link>
