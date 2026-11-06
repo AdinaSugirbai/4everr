@@ -8,6 +8,7 @@ const items = [
   { href: "/employer/vacancies/new", label: "Вакансия жасау" },
   { href: "/employer/vacancies/1/edit", label: "Вакансияны өңдеу" },
   { href: "/resume", label: "Менің резюмем" },
+  { href: "/me/applications", label: "Менің өтінімдерім" },
 ];
 
 export default function UserMenu() {
