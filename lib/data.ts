@@ -27,3 +27,11 @@ export const savedJobs = [
   { id: 4, title: "UI/UX дизайнер", company: "Beeline KZ", city: "Алматы", level: "Junior", salary: 300000 },
   { id: 6, title: "Backend әзірлеуші (Node.js)", company: "Freedom Finance", city: "Астана", level: "Middle", salary: 450000 },
 ];
+export const vacancies = [
+  { id: 1, title: "Junior Frontend әзірлеуші", company: "Kaspi Lab", city: "Астана", level: "Junior" },
+  { id: 2, title: "React тағылымдама", company: "Chocofamily", city: "қашықтан", level: "Тағылымдама" },
+  { id: 3, title: "Web әзірлеуші (Junior)", company: "Technodom", city: "Астана", level: "Junior" },
+  { id: 4, title: "UI/UX дизайнер", company: "Beeline KZ", city: "Алматы", level: "Junior" },
+  { id: 5, title: "QA инженер", company: "Kolesa Group", city: "Алматы", level: "Middle" },
+  { id: 6, title: "Backend әзірлеуші (Node.js)", company: "Freedom Finance", city: "Астана", level: "Middle" },
+];
