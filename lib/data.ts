@@ -21,3 +21,9 @@ export const applications: { title: string; meta: string; date: string; status: 
 export type Vac = { title: string; direction: string; city: string; level: string; format: string; from: string; to: string; desc: string; duties: string; reqs: string; skills: string };
 export const emptyVac: Vac = { title: "", direction: "Frontend", city: "Астана", level: "Junior", format: "Гибрид", from: "250000", to: "400000", desc: "", duties: "", reqs: "", skills: "HTML, CSS, JavaScript, React" };
 export const sampleVac: Vac = { ...emptyVac, title: "Junior Frontend әзірлеуші", desc: "Банк қосымшасының веб-интерфейстерін жасайтын командаға қосыласыз.", duties: "Макеттер бойынша беттер жасау\nReact компоненттерін жазу", reqs: "HTML, CSS, JS негіздері\nGit білу" };
+export const savedJobs = [
+  { id: 2, title: "React тағылымдама", company: "Chocofamily", city: "қашықтан", level: "Тағылымдама", salary: 150000 },
+  { id: 3, title: "Web әзірлеуші (Junior)", company: "Technodom", city: "Астана", level: "Junior", salary: 280000 },
+  { id: 4, title: "UI/UX дизайнер", company: "Beeline KZ", city: "Алматы", level: "Junior", salary: 300000 },
+  { id: 6, title: "Backend әзірлеуші (Node.js)", company: "Freedom Finance", city: "Астана", level: "Middle", salary: 450000 },
+];
