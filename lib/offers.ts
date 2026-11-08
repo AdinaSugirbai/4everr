@@ -6,7 +6,7 @@ export type Offer = {
 };
 
 export const OFFERS_KEY = "4everr:offers";
-export const statusLabel: Record<OfferStatus, string> = { NEW: "Жаңа", VIEWED: "Қаралды", THINKING: "Ойланып жатыр", ACCEPTED: "Қабылданды", DECLINED: "Бас тартылды" };
+export const statusLabel: Record<OfferStatus, string> = { NEW: "Жаңа|Новое|New", VIEWED: "Қаралды|Просмотрено|Viewed", THINKING: "Ойланып жатыр|Думает|Thinking", ACCEPTED: "Қабылданды|Принято|Accepted", DECLINED: "Бас тартылды|Отказ|Declined" };
 export const statusCls: Record<OfferStatus, string> = { NEW: "c-i", VIEWED: "c-w", THINKING: "c-w", ACCEPTED: "c-ok", DECLINED: "c-b" };
 
 const d = "08.11.2026";
