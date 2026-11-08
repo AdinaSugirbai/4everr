@@ -17,7 +17,7 @@ export default function StartPage() {
   const router = useRouter();
   const [mode, setMode] = useState<"login" | "register">("register");
   const [role, setRole] = useState<Role>("CANDIDATE");
-  const [f, setF] = useState({ name: "", email: "", pw: "", pw2: "" });
+  const [f, setF] = useState({ name: "", email: "", pw: "" });  
   const [e, setE] = useState<Record<string, string>>({});
   const [tried, setTried] = useState(false);
   const set = (k: string) => (ev: React.ChangeEvent<HTMLInputElement>) => setF({ ...f, [k]: ev.target.value });
