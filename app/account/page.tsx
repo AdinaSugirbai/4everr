@@ -15,7 +15,7 @@ export default function AccountPage() {
   const [name, setName] = useState(user?.name ?? "");
   const [email, setEmail] = useState(user?.email ?? "");
   const [pe, setPe] = useState<Record<string, string>>({});
-  const [pw, setPw] = useState({ old: "", nw: "", rep: "" });
+  const [pw, setPw] = useState({ old: "", nw: "" });
   const [we, setWe] = useState<Record<string, string>>({});
   const [wTried, setWTried] = useState(false);
   const [del, setDel] = useState(false);
@@ -37,11 +37,10 @@ export default function AccountPage() {
     const er: Record<string, string> = {};
     if (!pw.old) er.old = "Ескі құпиясөзді жазыңыз|Введите старый пароль|Enter the old password";
     if (!pwOk(pw.nw)) er.nw = "Құпиясөз талапқа сай емес|Пароль не соответствует требованиям|Password does not meet the rules";
-    if (pw.rep !== pw.nw) er.rep = "Құпиясөздер сәйкес емес|Пароли не совпадают|Passwords do not match";
     if (Object.keys(er).length) { setWe(er); return; }
     const m = changePassword(pw.old, pw.nw);
     if (m) { setWe({ old: m }); return; }
-    setWe({}); setWTried(false); setPw({ old: "", nw: "", rep: "" });
+    setWe({}); setWTried(false); setPw({ old: "", nw: "" });
     toast(t("Құпиясөз өзгертілді|Пароль изменён|Password changed"), "");
   }
   function doDelete() {
@@ -70,8 +69,6 @@ export default function AccountPage() {
         <div><label htmlFor="nw" className="font-semibold text-sm">{t("Жаңа құпиясөз|Новый пароль|New password")}</label>
           <input id="nw" type="password" className="inp mt-1" style={bad(we.nw)} value={pw.nw} onChange={(e) => setPw({ ...pw, nw: e.target.value })} />
           <div className="mt-2"><PwRules pw={pw.nw} strict={wTried} /></div></div>
-        <div><label htmlFor="rp" className="font-semibold text-sm">{t("Қайталаңыз|Повторите|Repeat")}</label>
-          <input id="rp" type="password" className="inp mt-1" style={bad(we.rep)} value={pw.rep} onChange={(e) => setPw({ ...pw, rep: e.target.value })} /><FieldErr e={we.rep} /></div>
         <button className="btn btn-p w-fit" onClick={savePw}>{t("Құпиясөзді өзгерту|Изменить пароль|Change password")}</button>
       </div>
 
