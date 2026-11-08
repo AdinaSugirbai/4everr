@@ -1,62 +1,61 @@
 "use client";
 import { useState } from "react";
+import { useAuth } from "@/lib/auth";
+import { useLocal } from "@/lib/store";
 import { toast } from "@/lib/fx";
 
-const skills: [string, number][] = [["HTML", 90], ["CSS", 85], ["JavaScript", 64], ["React", 30], ["Git", 70]];
-const works = [
-  { t: "Оқу жобасы: 4everr", d: "2026 · Next.js, Tailwind", x: "Кабинет пен вакансия беттерінің UI-ын жасады." },
-  { t: "Портфолио сайты", d: "2025 · HTML, CSS, JS", x: "Жеке сайт, адаптивті макет, қараңғы режим." },
-];
+type Skill = { name: string; level: number };
+type Resume = { position: string; city: string; phone: string; about: string; education: string; skills: Skill[] };
+const empty: Resume = { position: "Junior Frontend", city: "Астана", phone: "", about: "", education: "", skills: [{ name: "HTML", level: 90 }, { name: "CSS", level: 85 }] };
 
 export default function ResumePage() {
-  const [visible, setVisible] = useState(true);
-  function copy() {
-    navigator.clipboard?.writeText(window.location.href);
-    toast("Сілтеме көшірілді", "Резюмені жұмыс берушіге жібере аласыз");
-  }
+  const { user } = useAuth();
+  const [saved, save] = useLocal<Resume>("4everr:resume", empty);
+  const [draft, setDraft] = useState<Resume | null>(null);
+  const [sn, setSn] = useState("");
+  const r = draft ?? saved;
+
+  const set = (k: keyof Resume) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => setDraft({ ...r, [k]: e.target.value });
+  const setLevel = (i: number, v: number) => setDraft({ ...r, skills: r.skills.map((s, j) => (j === i ? { ...s, level: v } : s)) });
+  const del = (i: number) => setDraft({ ...r, skills: r.skills.filter((_, j) => j !== i) });
+  const add = () => { if (sn.trim()) { setDraft({ ...r, skills: [...r.skills, { name: sn.trim(), level: 50 }] }); setSn(""); } };
+  function submit() { save(r); setDraft(null); toast("Резюме сақталды", "Жұмыс берушілер жаңа нұсқаны көреді"); }
+
   return (
-    <div className="grid lg:grid-cols-[300px_1fr] gap-6 items-start">
-      <aside className="card p-5 lg:sticky lg:top-20 grid gap-4">
-        <div className="w-20 h-20 rounded-2xl bg-soft text-brand grid place-items-center text-2xl font-bold">ӘЖ</div>
-        <div><h1 className="font-bold text-xl">Әсел Жақсылық</h1><p className="text-mute text-sm">Junior Frontend әзірлеуші</p></div>
-        <p className="text-sm text-mute">Астана · asel@mail.kz<br />github.com/asel</p>
-        <label className="flex items-center justify-between gap-3 text-sm font-semibold">
-          Жұмыс берушілерге көрінеді
-          <input type="checkbox" checked={visible} onChange={(e) => setVisible(e.target.checked)} className="w-5 h-5" />
-        </label>
-        <span className={"chip " + (visible ? "c-ok" : "c-w")}>{visible ? "Ашық" : "Жасырын"}</span>
-        <button className="btn btn-p" onClick={copy}>Сілтемені көшіру</button>
-        <button className="btn btn-s" onClick={() => window.print()}>PDF ретінде сақтау</button>
-      </aside>
-      <div className="grid gap-4 min-w-0">
-        <section className="card p-6">
-          <h2 className="font-bold text-lg mb-2">Өзім туралы</h2>
-          <p className="text-mute max-w-[70ch]">Frontend бағытын оқып жатқан студентпін. Таза әрі ыңғайлы интерфейстер жасағанды ұнатамын, командада жұмыс істеуге дайынмын.</p>
-        </section>
-        <section className="card p-6">
-          <h2 className="font-bold text-lg mb-3">Дағдылар</h2>
+    <div className="grid lg:grid-cols-[1fr_340px] gap-6 items-start">
+      <div className="card p-5 grid gap-4">
+        <h1 className="font-bold text-2xl">Резюмені өңдеу</h1>
+        <div className="grid sm:grid-cols-2 gap-4">
+          <div><label htmlFor="p" className="font-semibold text-sm">Лауазым</label><input id="p" className="inp mt-1" value={r.position} onChange={set("position")} /></div>
+          <div><label htmlFor="c" className="font-semibold text-sm">Қала</label><input id="c" className="inp mt-1" value={r.city} onChange={set("city")} /></div>
+        </div>
+        <div><label htmlFor="ph" className="font-semibold text-sm">Телефон</label><input id="ph" className="inp mt-1" value={r.phone} onChange={set("phone")} placeholder="+7 ..." /></div>
+        <div><label htmlFor="a" className="font-semibold text-sm">Өзім туралы</label><textarea id="a" rows={4} className="inp mt-1" value={r.about} onChange={set("about")} /></div>
+        <div><label htmlFor="ed" className="font-semibold text-sm">Білім</label><input id="ed" className="inp mt-1" value={r.education} onChange={set("education")} /></div>
+        <div>
+          <p className="font-semibold text-sm mb-2">Дағдылар</p>
           <div className="grid gap-3">
-            {skills.map((s) => (
-              <div key={s[0]}>
-                <div className="flex justify-between text-sm"><span className="font-semibold">{s[0]}</span><span className="text-mute">{s[1]}%</span></div>
-                <div className="h-2 rounded-full bg-line overflow-hidden mt-1"><div className="bar h-full bg-brand" style={{ "--w": s[1] + "%" } as React.CSSProperties} /></div>
+            {r.skills.map((s, i) => (
+              <div key={i} className="flex items-center gap-3">
+                <span className="w-28 text-sm font-semibold truncate">{s.name}</span>
+                <input type="range" min={0} max={100} value={s.level} onChange={(e) => setLevel(i, Number(e.target.value))} className="grow" aria-label={s.name} />
+                <span className="w-10 text-sm text-mute">{s.level}%</span>
+                <button onClick={() => del(i)} aria-label="Өшіру" className="text-mute">×</button>
               </div>
             ))}
           </div>
-        </section>
-        <section className="card p-6">
-          <h2 className="font-bold text-lg mb-3">Жобалар</h2>
-          <div className="grid gap-4">
-            {works.map((w) => (
-              <div key={w.t} className="border-l-2 border-brand pl-4"><p className="font-semibold">{w.t}</p><p className="text-xs text-mute">{w.d}</p><p className="text-sm text-mute mt-1">{w.x}</p></div>
-            ))}
-          </div>
-        </section>
-        <section className="card p-6">
-          <h2 className="font-bold text-lg mb-2">Білім</h2>
-          <p className="font-semibold">Астана IT университеті</p><p className="text-sm text-mute">Бағдарламалық инженерия · 2024 – 2028</p>
-        </section>
+          <div className="flex gap-2 mt-3"><input className="inp" value={sn} onChange={(e) => setSn(e.target.value)} placeholder="Жаңа дағды" /><button className="btn btn-s" onClick={add}>Қосу</button></div>
+        </div>
+        <button className="btn btn-p w-fit" onClick={submit}>Резюмені сақтау</button>
       </div>
+      <aside className="card p-5 lg:sticky lg:top-20 grid gap-3">
+        <p className="text-sm text-mute">Жұмыс беруші осылай көреді</p>
+        <h2 className="font-bold text-xl">{user?.name}</h2>
+        <p className="text-mute text-sm">{r.position} · {r.city}</p>
+        {r.about && <p className="text-sm">{r.about}</p>}
+        <div className="flex flex-wrap gap-2">{r.skills.map((s, i) => (<span key={i} className="chip c-ok">{s.name} · {s.level}%</span>))}</div>
+        {r.education && <p className="text-xs text-mute">{r.education}</p>}
+      </aside>
     </div>
   );
 }
