@@ -30,7 +30,6 @@ export default function StartPage() {
     if (!/^\S+@\S+\.\S+$/.test(f.email.trim())) er.email = "Дұрыс email жазыңыз|Введите корректный email|Enter a valid email";
     if (reg) {
       if (!pwOk(f.pw)) er.pw = "Құпиясөз талапқа сай емес|Пароль не соответствует требованиям|Password does not meet the rules";
-      if (f.pw2 !== f.pw) er.pw2 = "Құпиясөздер сәйкес емес|Пароли не совпадают|Passwords do not match";
     } else if (!f.pw) er.pw = "Құпиясөзді жазыңыз|Введите пароль|Enter your password";
     setE(er);
     if (Object.keys(er).length) return;
@@ -68,10 +67,7 @@ export default function StartPage() {
         <div><label htmlFor="p" className="font-semibold text-sm">{t("Құпиясөз|Пароль|Password")}</label>
           <input id="p" type="password" className="inp mt-1" style={bad(e.pw)} aria-invalid={!!e.pw} value={f.pw} onChange={set("pw")} />
           {reg ? <div className="mt-2"><PwRules pw={f.pw} strict={tried} /></div> : <FieldErr e={e.pw} />}</div>
-        {reg && (
-          <div><label htmlFor="p2" className="font-semibold text-sm">{t("Құпиясөзді қайталаңыз|Повторите пароль|Repeat password")}</label>
-            <input id="p2" type="password" className="inp mt-1" style={bad(e.pw2)} aria-invalid={!!e.pw2} value={f.pw2} onChange={set("pw2")} /><FieldErr e={e.pw2} /></div>
-        )}
+      
         <FieldErr e={e.form} />
         <button className="btn btn-p" onClick={submit}>{reg ? t("Тіркелу|Зарегистрироваться|Create account") : t("Кіру|Войти|Sign in")}</button>
         <p className="text-xs text-mute">{t("Бұл демо: деректер тек осы браузерде сақталады.|Это демо: данные хранятся только в этом браузере.|This is a demo: data stays in this browser only.")}</p>
