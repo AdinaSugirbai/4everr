@@ -5,6 +5,7 @@ import { useAuth, pwOk, type Role } from "@/lib/auth";
 import { useI18n } from "@/lib/i18n";
 import PwRules from "@/components/PwRules";
 import { bad, FieldErr } from "@/lib/ui";
+import PasswordInput from "@/components/PasswordInput";
 
 const cards: { r: Role; t: string; d: string }[] = [
   { r: "CANDIDATE", t: "Мен кандидатпын|Я кандидат|I am a candidate", d: "Тест тапсырамын, резюме жасаймын, вакансияларға өтінім беремін|Прохожу тесты, создаю резюме, откликаюсь на вакансии|Take tests, build a resume, apply to jobs" },
