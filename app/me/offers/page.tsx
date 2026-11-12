@@ -32,20 +32,20 @@ export default function MyOffersPage() {
         <div className="grid gap-3">
           {offers.map((x) => (
             <button key={x.id} onClick={() => pick(x.id)} className="card p-4 text-left" style={x.id === o.id ? { borderColor: "var(--brand)" } : undefined}>
-              <div className="flex items-start justify-between gap-2"><p className="font-semibold leading-snug">{x.vacancy}</p><span className={"chip " + statusCls[x.status]}>{t(statusLabel[x.status])}</span></div>
-              <p className="text-sm text-mute mt-1">{x.company} · {x.salary}</p>
+              <div className="flex items-start justify-between gap-2"><p className="font-semibold leading-snug">{t(x.vacancy)}</p><span className={"chip " + statusCls[x.status]}>{t(statusLabel[x.status])}</span></div>
+              <p className="text-sm text-mute mt-1">{t(x.company)} · {x.salary}</p>
             </button>
           ))}
         </div>
         <div className="card p-6 grid gap-5">
-          <div><span className={"chip " + statusCls[o.status]}>{t(statusLabel[o.status])}</span><h2 className="font-bold text-2xl mt-3">{o.vacancy}</h2><p className="text-mute">{o.company} · {o.city}</p></div>
+          <div><span className={"chip " + statusCls[o.status]}>{t(statusLabel[o.status])}</span><h2 className="font-bold text-2xl mt-3">{t(o.vacancy)}</h2><p className="text-mute">{t(o.company)} · {t(o.city)}</p></div>
           <div className="grid sm:grid-cols-2 gap-3 text-sm">
             <div className="border border-line rounded-xl p-3"><p className="text-mute">{t("Жалақы|Зарплата|Salary")}</p><p className="font-bold text-brand">{o.salary}</p></div>
-            <div className="border border-line rounded-xl p-3"><p className="text-mute">{t("Формат|Формат|Format")}</p><p className="font-semibold">{o.format}</p></div>
+            <div className="border border-line rounded-xl p-3"><p className="text-mute">{t("Формат|Формат|Format")}</p><p className="font-semibold">{t(o.format)}</p></div>
             <div className="border border-line rounded-xl p-3"><p className="text-mute">{t("Жауап беру мерзімі|Срок ответа|Reply deadline")}</p><p className="font-semibold">{o.deadline}</p></div>
             <div className="border border-line rounded-xl p-3"><p className="text-mute">{t("Байланыс|Контакт|Contact")}</p><p className="font-semibold">{o.contact}</p></div>
           </div>
-          <div><h3 className="font-semibold mb-1">{t("Жұмыс берушінің хабарламасы|Сообщение работодателя|Employer message")}</h3><p className="text-mute">{o.message}</p></div>
+          <div><h3 className="font-semibold mb-1">{t("Жұмыс берушінің хабарламасы|Сообщение работодателя|Employer message")}</h3><p className="text-mute">{t(o.message)}</p></div>
           <div><h3 className="font-semibold mb-2">{t("Күйдің тарихы|История статусов|Status history")}</h3>
             <ol className="grid gap-1 text-sm">{o.history.map((h, i) => (<li key={i} className="flex gap-2"><span className="text-mute">{h.d}</span><span>{t(statusLabel[h.s])}</span></li>))}</ol></div>
           {final ? (
