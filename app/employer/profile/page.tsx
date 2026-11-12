@@ -6,7 +6,7 @@ import { bad, FieldErr } from "@/lib/ui";
 import { toast } from "@/lib/fx";
 
 type Company = { name: string; industry: string; city: string; size: string; site: string; about: string };
-const empty: Company = { name: "Kaspi Lab", industry: "Финтех", city: "Астана", size: "50-200", site: "", about: "" };
+const empty: Company = { name: "Kaspi Lab", industry: "Fintech", city: "Astana", size: "50-200", site: "", about: "" };
 const fields: [keyof Company, string][] = [["name", "Компания атауы|Название компании|Company name"], ["industry", "Сала|Сфера|Industry"], ["city", "Қала|Город|City"], ["size", "Қызметкер саны|Число сотрудников|Employees"], ["site", "Сайт|Сайт|Website"]];
 const required: (keyof Company)[] = ["name", "industry", "city"];
 
