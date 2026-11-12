@@ -1,4 +1,4 @@
-
+export const instant = false;
 import History from "@/components/History";
 import ProgressRing from "@/components/ProgressRing";
 import DailyChallenge from "@/components/DailyChallenge";
