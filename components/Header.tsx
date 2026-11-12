@@ -3,6 +3,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import ThemeToggle from "./ThemeToggle";
 import UserMenu from "./UserMenu";
+import LangSwitch from "./LangSwitch";
 import { useAuth, type Role } from "@/lib/auth";
 import { useI18n } from "@/lib/i18n";
 
@@ -40,7 +41,7 @@ export default function Header() {
             <Link key={l.href} href={l.href} className={"px-3 py-2 rounded-lg hover:bg-soft whitespace-nowrap " + (active(l.href) ? "bg-soft" : "")}>{t(l.label)}</Link>
           ))}
         </nav>
-        <div className="ml-auto flex items-center gap-2"><ThemeToggle /><UserMenu /></div>     
+        <div className="ml-auto flex items-center gap-2"><LangSwitch /><ThemeToggle /><UserMenu /></div>
       </div>
     </header>
   );
