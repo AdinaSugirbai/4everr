@@ -1,5 +1,5 @@
 "use client";
-import { createContext, useContext, useEffect, useState } from "react";
+import { lookup } from "@/lib/dict";
 
 export type Lang = "kk" | "ru" | "en";
 const LANGS: Lang[] = ["kk", "ru", "en"];
@@ -18,6 +18,7 @@ export function I18nProvider({ children }: { children: React.ReactNode }) {
   }, []);
   useEffect(() => { document.documentElement.lang = lang; }, [lang]);
   const setLang = (l: Lang) => { setL(l); try { localStorage.setItem("4everr:lang", l); } catch {} };
-  const t = (s: string) => { const p = s.split("|"); return p[LANGS.indexOf(lang)] ?? p[0]; };
-  return <Ctx.Provider value={{ lang, setLang, t }}>{children}</Ctx.Provider>;
-}
+  const t = (s: string) => {
+  const p = (s.includes("|") ? s : lookup(s) ?? s).split("|");
+  return p[LANGS.indexOf(lang)] ?? p[0];
+};
