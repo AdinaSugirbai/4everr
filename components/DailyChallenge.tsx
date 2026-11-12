@@ -41,7 +41,7 @@ export default function DailyChallenge() {
     <div className="card p-5 grid gap-3">
       <div className="flex items-center justify-between gap-2">
         <h3 className="font-bold">{t("Күннің IT сұрағы|Вопрос дня по IT|IT question of the day")}</h3>
-        <span className="chip c-w">🔥 {streakAlive ? s.streak : 0} {t("күн|дн.|days")}</span>
+        <span className="chip c-w">🔥 {streakAlive ? s.streak : 0} {t("күн|дн.|d")}</span>
       </div>
       <p className="font-medium">{t(q.q)}</p>
       <div className="grid gap-2">
