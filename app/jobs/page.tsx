@@ -24,7 +24,7 @@ export default function JobsPage() {
   const [ce, setCe] = useState("");
 
   const all = [...mine, ...seedJobs];
-  const list = all.filter((j) => (fmt === "all" || j.format === fmt) && (t(j.title) + " " + t(j.company) + " " + j.city + " " + j.tags.join(" ")).toLowerCase().includes(q.trim().toLowerCase()));
+  const list = all.filter((j) => (fmt === "all" || j.format === fmt) && (t(j.title) + " " + t(j.company) + " " + t(j.city) + " " + j.tags.join(" ")).toLowerCase().includes(q.trim().toLowerCase()));
   const complete = Object.keys(validateResume(resume)).length === 0;
   const applied = job ? apps.find((a) => a.vacancyId === job.id && a.email === user?.email) : undefined;
 
@@ -33,7 +33,7 @@ export default function JobsPage() {
     if (!job || !user) return;
     if (cover.trim().length < 10) { setCe("Кемінде 10 таңба жазыңыз|Минимум 10 символов|At least 10 characters"); return; }
     const a: Application = {
-      id: Date.now(), vacancyId: job.id, vacancy: t(job.title), company: t(job.company),
+      id: Date.now(), vacancyId: job.id, vacancy: job.title, company: job.company,
       name: user.name, email: user.email, position: resume.position, city: resume.city, phone: resume.phone,
       about: resume.about, education: resume.education, skills: resume.skills, photo: resume.photo,
       cover: cover.trim(), date: new Date().toLocaleDateString("ru-RU"), status: "NEW",
@@ -61,7 +61,7 @@ export default function JobsPage() {
           return (
             <button key={j.id} onClick={() => openJob(j)} className="card p-5 text-left hover:bg-soft grid gap-2">
               <div className="flex items-start justify-between gap-2"><p className="font-bold leading-snug">{t(j.title)}</p>{a && <span className={"chip " + appCls[a.status]}>{t(appLabel[a.status])}</span>}</div>
-              <p className="text-sm text-mute">{t(j.company)} · {j.city} · {t(fmtLabel[j.format])}</p>
+              <p className="text-sm text-mute">{t(j.company)} · {t(j.city)} · {t(fmtLabel[j.format])}</p>
               <p className="font-semibold text-brand text-sm">{j.salary}</p>
               <div className="flex flex-wrap gap-2">{j.tags.map((g) => <span key={g} className="chip c-i">{g}</span>)}</div>
             </button>
@@ -72,7 +72,7 @@ export default function JobsPage() {
       <Modal open={!!job} onClose={() => setJob(null)} title={job ? t(job.title) : ""} wide>
         {job && (
           <>
-            <p className="text-mute">{t(job.company)} · {job.city} · {t(fmtLabel[job.format])} · {job.level}</p>
+            <p className="text-mute">{t(job.company)} · {t(job.city)} · {t(fmtLabel[job.format])} · {job.level}</p>
             <p className="font-bold text-brand">{job.salary}</p>
             <div><h3 className="font-semibold mb-1">{t("Сипаттама|Описание|Description")}</h3><p className="text-mute">{t(job.desc)}</p></div>
             <div><h3 className="font-semibold mb-1">{t("Талаптар|Требования|Requirements")}</h3>
