@@ -2,19 +2,18 @@
 import Link from "next/link";
 import History from "@/components/History";
 import ProgressRing from "@/components/ProgressRing";
-import DailyChallenge from "@/components/DailyChallenge";
+import BugHunt, { type Daily } from "@/components/BugHunt"; 
 import Avatar from "@/components/Avatar";
 import { useAuth } from "@/lib/auth";
 import { useI18n } from "@/lib/i18n";
 import { useLocal } from "@/lib/store";
 
-type Daily = { last: string; streak: number; picked: number | null };
 const day = (ms = 0) => new Date(Date.now() - ms).toISOString().slice(0, 10);
 
 export default function ProfilePage() {
   const { t } = useI18n();
   const { user } = useAuth();
-  const [daily] = useLocal<Daily>("4everr:daily", { last: "", streak: 0, picked: null });
+  const [daily, saveDaily] = useLocal<Daily>("4everr:daily", { last: "", streak: 0, picked: null, xp: 0 });
   const name = user?.name || "Әсел Жақсылық";
   const email = user?.email || "asel@mail.kz";
   const streak = daily.last === day() || daily.last === day(86400000) ? daily.streak : 0;
