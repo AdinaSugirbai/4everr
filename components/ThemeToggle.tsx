@@ -1,7 +1,9 @@
 "use client";
 import { useEffect, useState } from "react";
+import { useI18n } from "@/lib/i18n";
 
 export default function ThemeToggle() {
+  const { t } = useI18n();
   const [dark, setDark] = useState(false);
 
   useEffect(() => {
@@ -19,7 +21,7 @@ export default function ThemeToggle() {
   }
 
   return (
-    <button onClick={toggle} aria-label="Жарық/қараңғы режимді ауыстыру" className="w-9 h-9 rounded-full border border-line grid place-items-center hover:bg-soft">
+    <button onClick={toggle} aria-label={t("Жарық/қараңғы режимді ауыстыру|Переключить светлую/тёмную тему|Toggle light/dark mode")} className="w-9 h-9 rounded-full border border-line grid place-items-center hover:bg-soft">
       {dark ? "☀️" : "☾"}
     </button>
   );
