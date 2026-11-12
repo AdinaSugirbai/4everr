@@ -4,7 +4,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { useAuth } from "@/lib/auth";
 import { useI18n } from "@/lib/i18n";
-import { initials } from "@/lib/ui";
+import Avatar from "@/components/Avatar";
 
 export default function UserMenu() {
   const { user, logout } = useAuth();
@@ -32,7 +32,7 @@ export default function UserMenu() {
     <div ref={ref} className="relative">
       <button onClick={() => setOpen(!open)} aria-expanded={open} aria-haspopup="menu" className="flex items-center gap-2 rounded-full pl-3 pr-1 py-1 hover:bg-soft">
         <span className="hidden sm:block text-sm text-mute">{user.name}</span>
-        <span className="w-9 h-9 rounded-full bg-brand text-onb grid place-items-center text-sm font-bold">{initials(user.name)}</span>
+        <Avatar name={user.name} size={36} />
       </button>
       {open && (
         <div role="menu" className="card absolute right-0 top-full mt-2 w-72 p-2 shadow-xl" style={{ animation: "rv .2s ease-out" }}>
