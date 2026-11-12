@@ -69,7 +69,7 @@ export default function ProfilePage() {
         </aside>
 
         <div className="grid gap-6 min-w-0">
-          <DailyChallenge />
+         <BugHunt daily={daily} onChange={saveDaily} />       
           <History />
         </div>
       </div>
