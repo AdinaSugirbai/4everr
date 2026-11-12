@@ -11,6 +11,10 @@ export const statusCls: Record<OfferStatus, string> = { NEW: "c-i", VIEWED: "c-w
 
 const d = "08.11.2026";
 export const seedOffers: Offer[] = [
-  { id: 1, vacancy: "Junior Frontend әзірлеуші", company: "Kaspi Lab", salary: "300 000 – 400 000 ₸", format: "Гибрид", city: "Астана", message: "Тест нәтижелеріңіз бен жобаңыз ұнады. Командаға қосылуды ұсынамыз, алғашқы айда ментор бекітіледі.", date: d, deadline: "20.11.2026", contact: "hr@kaspilab.kz", status: "NEW", history: [{ s: "NEW", d }] },
-  { id: 2, vacancy: "UI/UX дизайнер (Junior)", company: "Beeline KZ", salary: "250 000 – 320 000 ₸", format: "Офис", city: "Алматы", message: "Портфолиоңыз қызықты көрінді. Сізге ұсыныс жасағымыз келеді.", date: d, deadline: "25.11.2026", contact: "jobs@beeline.kz", status: "NEW", history: [{ s: "NEW", d }] },
+  { id: 1, vacancy: "Junior Frontend әзірлеуші|Junior Frontend разработчик|Junior Frontend Developer", company: "Kaspi Lab", salary: "300 000 – 400 000 ₸", format: "Гибрид|Гибрид|Hybrid", city: "Астана|Астана|Astana",
+    message: "Тест нәтижелеріңіз бен жобаңыз ұнады. Командаға қосылуды ұсынамыз, алғашқы айда ментор бекітіледі.|Нам понравились ваши результаты тестов и проект. Предлагаем присоединиться к команде, в первый месяц закрепим ментора.|We liked your test results and project. We offer you to join the team, and a mentor is assigned for the first month.",
+    date: d, deadline: "20.11.2026", contact: "hr@kaspilab.kz", status: "NEW", history: [{ s: "NEW", d }] },
+  { id: 2, vacancy: "UI/UX дизайнер (Junior)|UI/UX дизайнер (Junior)|UI/UX Designer (Junior)", company: "Beeline KZ", salary: "250 000 – 320 000 ₸", format: "Офис|Офис|Office", city: "Алматы|Алматы|Almaty",
+    message: "Портфолиоңыз қызықты көрінді. Сізге ұсыныс жасағымыз келеді.|Ваше портфолио выглядит интересно. Хотим сделать вам предложение.|Your portfolio looks interesting. We would like to make you an offer.",
+    date: d, deadline: "25.11.2026", contact: "jobs@beeline.kz", status: "NEW", history: [{ s: "NEW", d }] },
 ];
