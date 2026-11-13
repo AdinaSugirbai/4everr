@@ -35,12 +35,13 @@ function useTr() {
   };
 }
 
-function Toolbar({ chips, value, onChange, sorts, sort, onSort }: { chips: Opt[]; value: string; onChange: (v: string) => void; sorts: Opt[]; sort: string; onSort: (v: string) => void }) {
+function Toolbar(props: { chips: Opt[]; value: string; onChange: (v: string) => void; sorts: Opt[]; sort: string; onSort: (v: string) => void }) {
+  const { chips, value, onChange, sorts, sort, onSort } = props;
   const { t } = useI18n();
   return (
     <div className="flex flex-wrap items-center gap-2 mb-4">
       {chips.map((c) => (
-        <button key={c.v} onClick={() => onChange(c.v)} className={chip min-h-[32px] ${value === c.v ? "c-ok" : "c-i"}}>{c.l}</button>
+        <button key={c.v} onClick={() => onChange(c.v)} className={"chip min-h-[32px] " + (value === c.v ? "c-ok" : "c-i")}>{c.l}</button>
       ))}
       <select className="inp ml-auto" style={{ width: "auto" }} value={sort} onChange={(e) => onSort(e.target.value)} aria-label={t("Сұрыптау|Сортировка|Sort")}>
         {sorts.map((s) => <option key={s.v} value={s.v}>{s.l}</option>)}
@@ -61,4 +62,11 @@ function Tests() {
       <Toolbar value={f} onChange={setF} sort={s} onSort={setS}
         chips={["all", "HTML", "CSS", "JavaScript", "Java"].map((v) => ({ v, l: v === "all" ? t("Барлығы|Все|All") : v }))}
         sorts={[
-          { v: "new", l: t("Жаңасы бірінші|Сначала новые|Newest first")
+          { v: "new", l: t("Жаңасы бірінші|Сначала новые|Newest first") },
+          { v: "old", l: t("Ескісі бірінші|Сначала старые|Oldest first") },
+          { v: "best", l: t("Ең жақсы нәтиже|Лучший результат|Best result") },
+          { v: "worst", l: t("Ең төмен нәтиже|Худший результат|Lowest result") },
+        ]} />
+      <div className="overflow-x-auto">
+        <table className="w-full text-sm min-w-[560px]">
+          <thead className="text-left
