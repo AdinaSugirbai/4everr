@@ -3,6 +3,7 @@ import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { useI18n } from "@/lib/i18n";
 import { applications, savedJobs, statusUi, tests, type AppStatus } from "@/lib/data";
+import { applications, savedJobs, statusUi, tests, vacancies, type AppStatus } from "@/lib/data";
 
 type Opt = { v: string; l: string };
 
