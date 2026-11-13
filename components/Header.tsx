@@ -6,6 +6,7 @@ import UserMenu from "./UserMenu";
 import LangSwitch from "./LangSwitch";
 import { useAuth, type Role } from "@/lib/auth";
 import { useI18n } from "@/lib/i18n";
+import { BRAND } from "@/lib/brand";
 
 const common = [{ href: "/test", label: "Тест|Тест|Test" }, { href: "/survey", label: "Сауалнама|Опрос|Survey" }];
 const menus: Record<Role, { href: string; label: string }[]> = {
@@ -35,7 +36,9 @@ export default function Header() {
   return (
     <header className="sticky z-40 border-b border-line bg-sf" style={{ top: "env(safe-area-inset-top,0px)" }}>
       <div className="max-w-6xl mx-auto px-4 h-14 flex items-center gap-4">
-        <Link href={home} className="font-bold text-lg tracking-tight text-brand">4everr</Link>
+        <Link href={home} className="font-bold text-lg tracking-tight" aria-label={BRAND}>
+          <span className="text-brand">{BRAND.slice(0, 2)}</span>{BRAND.slice(2)}
+        </Link>
         <nav className="flex gap-1 text-sm overflow-x-auto" aria-label="Main">
           {links.map((l) => (
             <Link key={l.href} href={l.href} className={"px-3 py-2 rounded-lg hover:bg-soft whitespace-nowrap " + (active(l.href) ? "bg-soft" : "")}>{t(l.label)}</Link>
