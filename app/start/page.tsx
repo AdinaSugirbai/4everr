@@ -3,6 +3,7 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { useAuth, pwOk, type Role } from "@/lib/auth";
 import { useI18n } from "@/lib/i18n";
+import { BRAND } from "@/lib/brand";
 import PwRules from "@/components/PwRules";
 import PasswordInput from "@/components/PasswordInput";
 import { bad, FieldErr } from "@/lib/ui";
@@ -48,7 +49,7 @@ export default function StartPage() {
   return (
     <div className="max-w-xl mx-auto grid gap-5">
       <div>
-        <h1 className="font-bold text-3xl">{t("4everr-ге қош келдіңіз|Добро пожаловать в 4everr|Welcome to 4everr")}</h1>
+        <h1 className="font-bold text-3xl">{t("{b} платформасына қош келдіңіз|Добро пожаловать в {b}|Welcome to {b}").replace("{b}", BRAND)}</h1>
         <p className="text-mute mt-1">{reg ? t("Аккаунт жасап, рөліңізді таңдаңыз.|Создайте аккаунт и выберите роль.|Create an account and pick your role.") : t("Аккаунтыңызға кіріңіз.|Войдите в свой аккаунт.|Sign in to your account.")}</p>
       </div>
 
