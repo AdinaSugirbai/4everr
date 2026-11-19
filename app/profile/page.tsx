@@ -7,6 +7,7 @@ import Avatar from "@/components/Avatar";
 import { useAuth } from "@/lib/auth";
 import { useI18n } from "@/lib/i18n";
 import { useLocal } from "@/lib/store";
+import SectionLinks from "@/components/SectionLinks";
 
 const day = (ms = 0) => new Date(Date.now() - ms).toISOString().slice(0, 10);
 
