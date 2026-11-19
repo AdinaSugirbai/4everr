@@ -74,6 +74,7 @@ export default function ProfilePage() {
           <History />
         </div>
       </div>
-  <SectionLinks />
+  <SectionLinks /> 
+  </>
   ); 
 }
