@@ -20,19 +20,14 @@ export default function SkillPlanets({ percent, skills }: { percent: number; ski
 
   return (
     <section
-  className="relative mx-auto h-[420px] w-full overflow-hidden rounded-[28px] text-[#E6E9FF]"
-  style={{ background: "radial-gradient(ellipse at 50% 45%, #1A1442 0%, #0A0820 55%, #05040F 100%)" }}
-  aria-label={t("Дағдылар жүйесі|Система навыков|Skills system")}
->
+      className="relative mx-auto h-[420px] w-full overflow-hidden rounded-[28px] text-[#E6E9FF]"
+      style={{ background: "radial-gradient(ellipse at 50% 45%, #1A1442 0%, #0A0820 55%, #05040F 100%)" }}
+      aria-label={t("Дағдылар жүйесі|Система навыков|Skills system")}
+    >
       <style>{`
         @keyframes sp-orbit { to { transform: rotate(360deg); } }
         @keyframes sp-upright { to { transform: rotate(-360deg); } }
       `}</style>
-
-      <div className="absolute left-4 top-3 z-10 text-xs text-[#9AA3DA]">
-        {t("ITalent · Дағдылар жүйесі|ITalent · Система навыков|ITalent · Skills system")}
-      </div>
-      <div className="absolute right-4 top-3 z-10 text-xs text-[#9AA3DA]">Frontend</div>
 
       {ORBITS.map((r) => (
         <div
@@ -98,10 +93,8 @@ export default function SkillPlanets({ percent, skills }: { percent: number; ski
         );
       })}
 
-      <p className="absolute inset-x-4 bottom-3 text-center text-[11px] text-[#8E98CF]">
-        {t(
-          "Планетаның өлшемі деңгейді көрсетеді|Размер планеты показывает уровень|Planet size shows your level",
-        )}
+      <p className="absolute inset-x-5 bottom-4 text-center text-[11px] text-[#8E98CF]">
+        {t("Планетаның өлшемі деңгейді көрсетеді|Размер планеты показывает уровень|Planet size shows your level")}
       </p>
     </section>
   );
