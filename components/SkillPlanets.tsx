@@ -20,10 +20,10 @@ export default function SkillPlanets({ percent, skills }: { percent: number; ski
 
   return (
     <section
-      className="relative mx-auto h-[380px] w-full max-w-md overflow-hidden rounded-[28px] text-[#E6E9FF]"
-      style={{ background: "radial-gradient(ellipse at 50% 45%, #1A1442 0%, #0A0820 55%, #05040F 100%)" }}
-      aria-label={t("Дағдылар жүйесі|Система навыков|Skills system")}
-    >
+  className="relative mx-auto h-[420px] w-full overflow-hidden rounded-[28px] text-[#E6E9FF]"
+  style={{ background: "radial-gradient(ellipse at 50% 45%, #1A1442 0%, #0A0820 55%, #05040F 100%)" }}
+  aria-label={t("Дағдылар жүйесі|Система навыков|Skills system")}
+>
       <style>{`
         @keyframes sp-orbit { to { transform: rotate(360deg); } }
         @keyframes sp-upright { to { transform: rotate(-360deg); } }
