@@ -2,6 +2,7 @@
 import Link from "next/link";
 import BugHunt, { type Daily } from "@/components/BugHunt";
 import History from "@/components/History";
+import SkillPlanets, { type Skill } from "@/components/SkillPlanets";
 import { useAuth } from "@/lib/auth";
 import { useI18n } from "@/lib/i18n";
 import { useLocal } from "@/lib/store";
@@ -9,16 +10,19 @@ import { sectionHref, sections } from "@/lib/sections";
 
 const day = (ms = 0) => new Date(Date.now() - ms).toISOString().slice(0, 10);
 
+const percent = 58;
+
+const skills: Skill[] = [
+  { name: "HTML", value: 88 },
+  { name: "CSS", value: 74 },
+  { name: "JavaScript", value: 52 },
+  { name: "Java", value: 30 },
+];
+
 const quests = [
   { title: "Профильді толтыру", reward: 50, progress: 100 },
   { title: "Алғашқы резюме жасау", reward: 100, progress: 60 },
   { title: "JavaScript тесті 80%", reward: 150, progress: 52 },
-];
-
-const skills = [
-  { name: "HTML", value: 88 },
-  { name: "CSS", value: 74 },
-  { name: "JavaScript", value: 52 },
 ];
 
 export default function ProfilePage() {
@@ -27,124 +31,78 @@ export default function ProfilePage() {
   const [daily, saveDaily] = useLocal<Daily>("4everr:daily", { last: "", streak: 0, picked: null, xp: 0 });
   const name = user?.name || "Әсел Жақсылық";
   const streak = daily.last === day() || daily.last === day(86400000) ? daily.streak : 0;
-  const percent = 58;
 
   return (
-    <div className="-mx-4 -my-6">
-      {/* HERO */}
-      <section className="relative overflow-hidden rounded-b-[32px] bg-gradient-to-b from-[#B9F5E6] via-[#E8FBF6] to-bg px-5 pt-6 pb-20">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="grid h-11 w-11 place-items-center rounded-full bg-brand text-sm font-semibold text-white">
-              {name.slice(0, 1)}
-            </div>
-            <div>
-              <p className="text-xs text-mute">{t("Қош келдіңіз|Добро пожаловать|Welcome")}</p>
-              <p className="font-semibold leading-tight text-ink">{name}</p>
-            </div>
+    <div className="grid w-full gap-8 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.2fr)] lg:items-start">
+      {/* SOL: профиль және вакансия */}
+      <div className="min-w-0 space-y-6">
+        <div className="flex items-center gap-4">
+          <div className="grid h-16 w-16 shrink-0 place-items-center rounded-full bg-brand text-xl font-semibold text-white">
+            {name.slice(0, 1)}
           </div>
-          <div className="rounded-full bg-[#FFE9B8] px-3 py-1.5 text-sm font-medium text-[#8A5200]">
-            🔥 {daily.xp ?? 0}
+          <div className="min-w-0">
+            <p className="text-sm text-mute">{t("Қош келдіңіз|Добро пожаловать|Welcome")}</p>
+            <h1 className="truncate text-2xl font-bold text-ink">{name}</h1>
+            <p className="text-sm text-mute">
+              {streak > 0
+                ? t("{n} күн қатарынан белсенді|{n} дн. подряд|{n}-day streak").replace("{n}", String(streak))
+                : t("Бүгінгі сұраққа жауап беріп, серияны бастаңыз|Ответьте на вопрос дня|Answer today's question")}
+            </p>
           </div>
         </div>
 
-        <div className="mt-8 text-center">
-          <p className="text-xs uppercase tracking-[.18em] text-brand">4everr · Frontend</p>
-          <h1 className="mt-2 text-6xl font-bold tracking-tight text-brand">
-            {percent}<span className="text-2xl opacity-70">%</span>
-          </h1>
-          <p className="mx-auto mt-2 max-w-xs text-sm text-mute">
-            {streak > 0
-              ? t("{n} күн қатарынан белсенді|{n} дн. подряд|{n}-day streak").replace("{n}", String(streak))
-              : t("Бүгінгі сұраққа жауап беріп, серияны бастаңыз|Ответьте на вопрос дня|Answer today's question")}
+        <Link href="/jobs" className="block rounded-2xl bg-brand p-5 text-white transition-opacity hover:opacity-90">
+          <p className="text-xs uppercase tracking-wider opacity-80">
+            {t("Сәйкес вакансия|Подходящая вакансия|Matching job")}
           </p>
-          <Link
-            href="/jobs"
-            className="btn mt-5 inline-block rounded-xl bg-brand px-6 py-2.5 text-sm font-medium text-white"
-          >
-            {t("Сәйкес вакансияны ашу|Открыть подходящую вакансию|Open the matching job")}
-          </Link>
-        </div>
-      </section>
-
-      {/* NOTICE */}
-      <div className="relative z-10 -mt-8 mx-4 rounded-xl border border-[#CFE0FF] bg-sf px-4 py-3 text-sm text-[#2A47B8] shadow-sm">
-        {t("Kaspi Lab вакансиясына сәйкестік 90%-дан асады|Совпадение с Kaspi Lab превысит 90%|Your match for Kaspi Lab will exceed 90%")}
+          <p className="mt-1 text-lg font-semibold">Junior Frontend · 90%</p>
+          <p className="mt-1 text-sm opacity-85">
+            {t("JavaScript тестін 80%-ға жеткізіңіз|Доведите JavaScript до 80%|Raise JavaScript to 80%")}
+          </p>
+        </Link>
       </div>
 
-      {/* MENU */}
-      <div className="mt-4 rounded-t-3xl bg-sf px-4 pt-7 pb-6 shadow-[0_-2px_12px_rgba(10,114,102,.06)]">
-        <nav className="grid grid-cols-4 gap-y-6 text-center">
-          {sections.map((s, i) => {
-            const tones = [
-              "bg-soft text-brand",
-              "bg-[#FFF0D2] text-[#8A5200]",
-              "bg-[#E3EBFF] text-[#2A47B8]",
-              "bg-[#FDE3E1] text-[#A3261D]",
-            ];
-            return (
-              <Link key={s.slug} href={sectionHref(s.slug)} className="flex flex-col items-center gap-2 text-xs text-ink">
-                <span className={`grid h-14 w-14 place-items-center rounded-2xl text-2xl ${tones[i % tones.length]}`}>
-                  <span aria-hidden>{s.icon}</span>
-                </span>
-                <span className="leading-tight">{t(s.title)}</span>
-              </Link>
-            );
-          })}
-        </nav>
+      {/* ОҢ: планеталар, тапсырмалар, бөлімдер, тарих */}
+      <div className="min-w-0 space-y-8">
+        <SkillPlanets percent={percent} skills={skills} />
 
-        {/* PROMO */}
-        <div className="mt-6 grid grid-cols-2 gap-3">
-          <Link href="/jobs" className="relative flex h-36 flex-col justify-between overflow-hidden rounded-2xl border border-dashed border-brand bg-soft p-4">
-            <span className="text-sm font-semibold text-brand">{t("Вакансиялар|Вакансии|Jobs")}</span>
-            <span className="text-xs text-mute">{t("Жұмыс іздеу|Поиск работы|Find a job")}</span>
-          </Link>
-          <Link href="/test" className="relative flex h-36 flex-col justify-between overflow-hidden rounded-2xl bg-gradient-to-br from-brand to-[#0A5A50] p-4 text-white">
-            <span className="text-[10px] uppercase tracking-wider opacity-80">AI көмекші</span>
-            <span className="text-base font-semibold leading-snug">
-              {t("Тесттен өтіп, дағдыңызды тексеріңіз|Пройдите тест|Take a test")}
-            </span>
-          </Link>
-        </div>
-
-        {/* QUESTS */}
-        <div className="mt-8 flex items-center justify-between">
+        <section>
           <h2 className="text-lg font-bold text-ink">{t("Бастапқы тапсырмалар|Стартовые квесты|Starter quests")}</h2>
-          <span className="text-mute">ⓘ</span>
-        </div>
-        <div className="mt-3 flex gap-3 overflow-x-auto pb-2">
-          {quests.map((q) => (
-            <div key={q.title} className="min-w-[240px] rounded-2xl border border-line bg-bg p-4">
-              <p className="text-xs font-semibold text-[#12663A]">+{q.reward} ұпай</p>
-              <p className="mt-1 font-semibold text-ink">{q.title}</p>
-              <div className="mt-3 h-1.5 overflow-hidden rounded bg-line">
-                <div className="h-full rounded bg-brand" style={{ width: `${q.progress}%` }} />
-              </div>
-            </div>
-          ))}
-        </div>
-
-        {/* SKILLS */}
-        <div className="mt-8 rounded-2xl border border-line bg-bg p-4">
-          <h2 className="font-semibold text-ink">{t("Менің дағдыларым|Мои навыки|My skills")}</h2>
-          <div className="mt-3 grid gap-3">
-            {skills.map((s) => (
-              <div key={s.name} className="flex items-center gap-3 text-sm">
-                <span className="w-24 text-ink">{s.name}</span>
-                <div className="h-2 flex-1 overflow-hidden rounded bg-line">
-                  <div className="h-full rounded bg-brand" style={{ width: `${s.value}%` }} />
+          <div className="mt-3 grid gap-3 sm:grid-cols-3">
+            {quests.map((q) => (
+              <div key={q.title} className="rounded-2xl border border-line bg-sf p-4">
+                <span className="text-xs font-semibold text-brand">+{q.reward}</span>
+                <p className="mt-1 font-medium text-ink">{q.title}</p>
+                <div className="mt-3 h-1.5 overflow-hidden rounded bg-line">
+                  <div className="h-full rounded bg-brand" style={{ width: `${q.progress}%` }} />
                 </div>
-                <span className="w-10 text-right font-medium text-brand">{s.value}%</span>
               </div>
             ))}
           </div>
-        </div>
+        </section>
 
-        {/* EXISTING FEATURES */}
-        <div className="mt-8 grid gap-6">
-          <BugHunt daily={daily} onChange={saveDaily} />
-          <History />
-        </div>
+        <section>
+          <h2 className="text-lg font-bold text-ink">{t("Бөлімдер|Разделы|Sections")}</h2>
+          <div className="mt-3 grid gap-4 sm:grid-cols-2">
+            {sections.map((s) => (
+              <Link
+                key={s.slug}
+                href={sectionHref(s.slug)}
+                className="flex items-start gap-3 rounded-2xl border border-line bg-sf p-5 transition-colors hover:bg-soft"
+              >
+                <span className="text-2xl" aria-hidden>{s.icon}</span>
+                <span className="grow">
+                  <span className="block font-semibold text-ink">{t(s.title)}</span>
+                  <span className="mt-0.5 block text-sm text-mute">{t(s.desc)}</span>
+                </span>
+                <span className="text-brand" aria-hidden>→</span>
+              </Link>
+            ))}
+          </div>
+        </section>
+
+        <BugHunt daily={daily} onChange={saveDaily} />
+        <History />
       </div>
     </div>
   );
