@@ -147,8 +147,13 @@ export default function StartPage() {
 
           {mode === "register" && (
             <ul className="mt-3 space-y-1 text-sm">
-              {rules.map((r, i) => (
-                <li key={i} className={r.ok ? "text-green-600" : "text-mute"}>
+              {[
+                { ok: rules.len, label: t("Кемінде 6 таңба|Минимум 6 символов|At least 6 characters") },
+                { ok: rules.letter, label: t("Әріп|Буква|A letter") },
+                { ok: rules.digit, label: t("Сан|Цифра|A number") },
+                { ok: rules.symbol, label: t("Арнайы таңба|Специальный символ|A special character") },
+              ].map((r) => (
+                <li key={r.label} className={r.ok ? "text-green-600" : "text-mute"}>
                   {r.ok ? "✓" : "•"} {r.label}
                 </li>
               ))}
