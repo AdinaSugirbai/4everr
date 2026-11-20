@@ -6,6 +6,9 @@ import { useAuth } from "@/lib/auth";
 
 const NAV = [
   { href: "/admin/users", label: "Пайдаланушылар" },
+  { href: "/admin/vacancies", label: "Вакансиялар" },
+  { href: "/admin/applications", label: "Өтінімдер" },
+  { href: "/admin/stats", label: "Статистика" },
   { href: "/admin/logs", label: "Журнал" },
 ];
 
