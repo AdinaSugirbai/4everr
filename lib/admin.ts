@@ -3,6 +3,22 @@ import type { Role } from "@/lib/auth";
 
 export type AppStatus = "NEW" | "VIEWED" | "INTERVIEW" | "HIRED" | "REJECTED";
 
+export async function updateProfileName(id: string, name: string) {
+  const { error } = await supabase().rpc("admin_update_profile_name", { target: id, new_name: name.trim() });
+  if (error) throw error;
+}
+export async function updateVacancy(id: string, fields: { title: string; company: string; city: string; salary: string; level: string }) {
+  const { error } = await supabase().rpc("admin_update_vacancy", {
+    target: id,
+    new_title: fields.title.trim(),
+    new_company: fields.company.trim(),
+    new_city: fields.city.trim(),
+    new_salary: fields.salary.trim(),
+    new_level: fields.level.trim(),
+  });
+  if (error) throw error;
+}
+
 export async function setRole(id: string, role: Role) {
   const { error } = await supabase().rpc("admin_set_role", { target: id, new_role: role });
   if (error) throw error;
@@ -31,4 +47,9 @@ export async function getStats() {
   const { data, error } = await supabase().rpc("admin_stats");
   if (error) throw error;
   return data as Record<string, number>;
+}
+
+export async function deleteApplication(id: string) {
+  const { error } = await supabase().rpc("admin_delete_application", { target: id });
+  if (error) throw error;
 }

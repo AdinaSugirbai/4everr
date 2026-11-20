@@ -1,7 +1,8 @@
 "use client";
 import { useCallback, useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase/client";
-import { setAppStatus, type AppStatus } from "@/lib/admin";
+import { deleteApplication, setAppStatus, type AppStatus } from "@/lib/admin";
+import { useI18n } from "@/lib/i18n";
 
 type Row = {
   id: string;
@@ -13,14 +14,15 @@ type Row = {
 };
 
 const STATUSES: { v: AppStatus; label: string }[] = [
-  { v: "NEW", label: "Жаңа" },
-  { v: "VIEWED", label: "Қаралды" },
-  { v: "INTERVIEW", label: "Сұхбат" },
-  { v: "HIRED", label: "Қабылданды" },
-  { v: "REJECTED", label: "Бас тартылды" },
+  { v: "NEW", label: "Жаңа|Новая|New" },
+  { v: "VIEWED", label: "Қаралды|Просмотрена|Viewed" },
+  { v: "INTERVIEW", label: "Сұхбат|Собеседование|Interview" },
+  { v: "HIRED", label: "Қабылданды|Принят|Hired" },
+  { v: "REJECTED", label: "Бас тартылды|Отклонена|Rejected" },
 ];
 
 export default function AdminApplications() {
+  const { t, lang } = useI18n();
   const [rows, setRows] = useState<Row[]>([]);
   const [err, setErr] = useState<string | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
@@ -35,6 +37,19 @@ export default function AdminApplications() {
   }, []);
 
   useEffect(() => { load(); }, [load]);
+
+  async function changeDelete(id: string) {
+    setErr(null);
+    setBusy(id);
+    try {
+      await deleteApplication(id);
+      await load();
+    } catch (e) {
+      setErr((e as Error).message);
+    } finally {
+      setBusy(null);
+    }
+  }
 
   async function change(id: string, status: AppStatus) {
     setErr(null);
@@ -51,18 +66,19 @@ export default function AdminApplications() {
 
   return (
     <div className="space-y-4">
-      <h1 className="text-2xl font-bold text-ink">Өтінімдер ({rows.length})</h1>
+      <h1 className="text-2xl font-bold text-ink">{t("Өтінімдер|Заявки|Applications")} ({rows.length})</h1>
       {err && <p className="rounded-xl bg-red-500/10 px-4 py-3 text-sm text-red-500">{err}</p>}
 
       <div className="overflow-x-auto rounded-2xl border border-line bg-sf">
         <table className="w-full text-left text-sm">
           <thead className="border-b border-line text-mute">
             <tr>
-              <th className="px-4 py-3">Кандидат</th>
-              <th className="px-4 py-3">Вакансия</th>
-              <th className="px-4 py-3">Компания</th>
-              <th className="px-4 py-3">Күні</th>
-              <th className="px-4 py-3">Статус</th>
+              <th className="px-4 py-3">{t("Үміткер|Кандидат|Candidate")}</th>
+              <th className="px-4 py-3">{t("Вакансия|Вакансия|Vacancy")}</th>
+              <th className="px-4 py-3">{t("Компания|Компания|Company")}</th>
+              <th className="px-4 py-3">{t("Күні|Дата|Date")}</th>
+              <th className="px-4 py-3">{t("Күйі|Статус|Status")}</th>
+              <th className="px-4 py-3">{t("Әрекет|Действия|Actions")}</th>
             </tr>
           </thead>
           <tbody>
@@ -74,7 +90,7 @@ export default function AdminApplications() {
                 </td>
                 <td className="px-4 py-3 text-ink">{r.job_title}</td>
                 <td className="px-4 py-3 text-mute">{r.company}</td>
-                <td className="px-4 py-3 text-mute">{new Date(r.created_at).toLocaleDateString("kk-KZ")}</td>
+                <td className="px-4 py-3 text-mute">{new Date(r.created_at).toLocaleDateString(lang === "kk" ? "kk-KZ" : lang === "ru" ? "ru-RU" : "en-US")}</td>
                 <td className="px-4 py-3">
                   <select
                     value={r.status}
@@ -83,14 +99,19 @@ export default function AdminApplications() {
                     className="rounded-lg border border-line bg-bg px-2 py-1 text-ink"
                   >
                     {STATUSES.map((s) => (
-                      <option key={s.v} value={s.v}>{s.label}</option>
+                      <option key={s.v} value={s.v}>{t(s.label)}</option>
                     ))}
                   </select>
+                </td>
+                <td className="px-4 py-3">
+                  <button disabled={busy === r.id} onClick={() => { if (confirm(t("Өтінімді өшіресіз бе?|Удалить заявку?|Delete this application?"))) changeDelete(r.id); }} className="rounded-lg bg-red-500/10 px-3 py-1 text-red-500 disabled:opacity-40">
+                    {t("Өшіру|Удалить|Delete")}
+                  </button>
                 </td>
               </tr>
             ))}
             {rows.length === 0 && !err && (
-              <tr><td colSpan={5} className="px-4 py-6 text-center text-mute">Өтінім жоқ.</td></tr>
+              <tr><td colSpan={6} className="px-4 py-6 text-center text-mute">{t("Өтінім жоқ.|Заявок нет.|No applications.")}</td></tr>
             )}
           </tbody>
         </table>

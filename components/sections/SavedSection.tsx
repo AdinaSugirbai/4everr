@@ -29,7 +29,7 @@ export default function SavedSection() {
           <p className="font-semibold text-brand text-sm">{j.salary}</p>
           <div className="flex flex-wrap gap-2">{j.tags.map((g) => <span key={g} className="chip c-i">{g}</span>)}</div>
           <div className="flex gap-2 mt-1">
-            <Link href="/jobs" className="btn btn-p">{t("Ашу|Открыть|Open")}</Link>
+            <Link href={`/jobs?job=${encodeURIComponent(j.id)}`} className="btn btn-p">{t("Ашу|Открыть|Open")}</Link>
             <button className="btn btn-s" onClick={() => saveIds(ids.filter((x) => x !== j.id))}>{t("Өшіру|Убрать|Remove")}</button>
           </div>
         </div>

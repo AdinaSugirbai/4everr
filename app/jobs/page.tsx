@@ -1,6 +1,6 @@
 "use client";
 import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useAuth } from "@/lib/auth";
 import { useI18n } from "@/lib/i18n";
 import { useLocal } from "@/lib/store";
@@ -9,6 +9,7 @@ import { JOBS_KEY, fmtLabel, seedJobs, type Job } from "@/lib/jobs";
 import { APPS_KEY, appCls, appLabel, seedApps, type Application } from "@/lib/apps";
 import { emptyResume, resumeKey, validateResume, type Resume } from "@/lib/resume";
 import { bad, FieldErr } from "@/lib/ui";
+import { DATA_KEYS } from "@/lib/sections";
 import { burst, toast } from "@/lib/fx";
 
 export default function JobsPage() {
@@ -16,6 +17,25 @@ export default function JobsPage() {
   const { t } = useI18n();
   const [mine] = useLocal<Job[]>(JOBS_KEY, []);
   const [apps, saveApps] = useLocal<Application[]>(APPS_KEY, seedApps);
+  const savedKey = DATA_KEYS.saved(user?.email ?? "");
+  const [savedIds, setSavedIds] = useState<string[]>([]);
+  useEffect(() => {
+    const loadSaved = () => {
+      try {
+        const value = JSON.parse(localStorage.getItem(savedKey) ?? "[]");
+        setSavedIds(Array.isArray(value) ? value : []);
+      } catch {
+        setSavedIds([]);
+      }
+    };
+    loadSaved();
+    window.addEventListener("storage", loadSaved);
+    return () => window.removeEventListener("storage", loadSaved);
+  }, [savedKey]);
+  function saveIds(ids: string[]) {
+    setSavedIds(ids);
+    localStorage.setItem(savedKey, JSON.stringify(ids));
+  }
   const [resume] = useLocal<Resume>(resumeKey(user?.email ?? ""), emptyResume);
   const [q, setQ] = useState("");
   const [fmt, setFmt] = useState("all");
@@ -27,6 +47,13 @@ export default function JobsPage() {
   const list = all.filter((j) => (fmt === "all" || j.format === fmt) && (t(j.title) + " " + t(j.company) + " " + t(j.city) + " " + j.tags.join(" ")).toLowerCase().includes(q.trim().toLowerCase()));
   const complete = Object.keys(validateResume(resume)).length === 0;
   const applied = job ? apps.find((a) => a.vacancyId === job.id && a.email === user?.email) : undefined;
+
+  useEffect(() => {
+    const id = new URLSearchParams(window.location.search).get("job");
+    if (!id) return;
+    const selected = [...mine, ...seedJobs].find((item) => item.id === id);
+    if (selected) setJob(selected);
+  }, [mine]);
 
   function openJob(j: Job) { setJob(j); setCover(""); setCe(""); }
   function apply(ev: React.MouseEvent<HTMLButtonElement>) {
@@ -59,12 +86,25 @@ export default function JobsPage() {
         {list.map((j) => {
           const a = apps.find((x) => x.vacancyId === j.id && x.email === user?.email);
           return (
-            <button key={j.id} onClick={() => openJob(j)} className="card p-5 text-left hover:bg-soft grid gap-2">
-              <div className="flex items-start justify-between gap-2"><p className="font-bold leading-snug">{t(j.title)}</p>{a && <span className={"chip " + appCls[a.status]}>{t(appLabel[a.status])}</span>}</div>
-              <p className="text-sm text-mute">{t(j.company)} · {t(j.city)} · {t(fmtLabel[j.format])}</p>
-              <p className="font-semibold text-brand text-sm">{j.salary}</p>
-              <div className="flex flex-wrap gap-2">{j.tags.map((g) => <span key={g} className="chip c-i">{g}</span>)}</div>
-            </button>
+            <article key={j.id} className="card p-5 grid gap-3 hover:bg-soft">
+              <button type="button" onClick={() => openJob(j)} className="grid gap-2 text-left">
+                <div className="flex items-start justify-between gap-2"><p className="font-bold leading-snug">{t(j.title)}</p>{a && <span className={"chip " + appCls[a.status]}>{t(appLabel[a.status])}</span>}</div>
+                <p className="text-sm text-mute">{t(j.company)} · {t(j.city)} · {t(fmtLabel[j.format])}</p>
+                <p className="font-semibold text-brand text-sm">{j.salary}</p>
+                <div className="flex flex-wrap gap-2">{j.tags.map((g) => <span key={g} className="chip c-i">{g}</span>)}</div>
+              </button>
+              <button
+                type="button"
+                aria-pressed={savedIds.includes(j.id)}
+                onClick={() => saveIds(savedIds.includes(j.id) ? savedIds.filter((id) => id !== j.id) : [...savedIds, j.id])}
+                className="w-fit rounded-xl border border-line px-3 py-2 text-sm font-semibold text-ink hover:bg-soft"
+              >
+                <span aria-hidden="true">{savedIds.includes(j.id) ? "★" : "☆"}</span>{" "}
+                {savedIds.includes(j.id)
+                  ? t("Таңдаулыдан алып тастау|Убрать из избранного|Remove from favorites")
+                  : t("Таңдаулыға қосу|Добавить в избранное|Add to favorites")}
+              </button>
+            </article>
           );
         })}
       </div>
