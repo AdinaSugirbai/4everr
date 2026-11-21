@@ -32,11 +32,12 @@ export default function ApplicationsSection() {
       {list.length === 0 && <p className="text-mute">{t("Бұл күйде өтініш жоқ.|Нет откликов с этим статусом.|No applications with this status.")}</p>}
       <div className="grid md:grid-cols-2 gap-4">
         {list.map((a) => (
-          <div key={a.id} className="card p-5 grid gap-2">
+          <Link key={a.id} href={`/jobs?job=${encodeURIComponent(a.vacancyId)}`} className="card p-5 grid gap-2 transition-colors hover:bg-soft focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand">
             <div className="flex items-start justify-between gap-2"><p className="font-bold leading-snug">{t(a.vacancy)}</p><span className={"chip " + appCls[a.status]}>{t(appLabel[a.status])}</span></div>
             <p className="text-sm text-mute">{t(a.company)} · {a.date}</p>
             <div><p className="text-sm font-semibold">{t("Қысқаша хат|Сопроводительное письмо|Cover letter")}</p><p className="text-sm text-mute">{t(a.cover)}</p></div>
-          </div>
+            <span className="mt-1 text-sm font-semibold text-brand">{t("Вакансияны ашу →|Открыть вакансию →|Open vacancy →")}</span>
+          </Link>
         ))}
       </div>
     </>

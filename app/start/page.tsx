@@ -1,99 +1,189 @@
 "use client";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
-import { useAuth, pwOk, type Role } from "@/lib/auth";
+import { useAuth, checkPassword, pwOk, type Role } from "@/lib/auth";
 import { useI18n } from "@/lib/i18n";
-import { BRAND } from "@/lib/brand";
-import PwRules from "@/components/PwRules";
-import PasswordInput from "@/components/PasswordInput";
-import { bad, FieldErr } from "@/lib/ui";
 
-const cards: { r: Role; t: string; d: string }[] = [
-  { r: "CANDIDATE", t: "Мен кандидатпын|Я кандидат|I am a candidate", d: "Тест тапсырамын, резюме жасаймын, вакансияларға өтінім беремін|Прохожу тесты, создаю резюме, откликаюсь на вакансии|Take tests, build a resume, apply to jobs" },
-  { r: "EMPLOYER", t: "Мен жұмыс берушімін|Я работодатель|I am an employer", d: "Вакансия жариялаймын, өтінімдерді қарап, ұсыныс жіберемін|Публикую вакансии, смотрю заявки, отправляю предложения|Post jobs, review applications, send offers" },
-];
+type Mode = "register" | "signin";
+type RegRole = Exclude<Role, "ADMIN">;
 
 export default function StartPage() {
-  const { register, signin } = useAuth();
   const { t } = useI18n();
+  const { user, ready, register, signin } = useAuth();
   const router = useRouter();
-  const [mode, setMode] = useState<"login" | "register">("register");
-  const [role, setRole] = useState<Role>("CANDIDATE");
-  const [f, setF] = useState({ name: "", email: "", pw: "" });
-  const [e, setE] = useState<Record<string, string>>({});
-  const [tried, setTried] = useState(false);
-  const set = (k: string) => (ev: React.ChangeEvent<HTMLInputElement>) => setF({ ...f, [k]: ev.target.value });
-  const reg = mode === "register";
 
-  function submit() {
-    setTried(true);
-    const er: Record<string, string> = {};
-    if (reg && f.name.trim().length < 2) er.name = "Атыңызды жазыңыз|Введите имя|Enter your name";
-    if (!/^\S+@\S+\.\S+$/.test(f.email.trim())) er.email = "Дұрыс email жазыңыз|Введите корректный email|Enter a valid email";
-    if (reg) {
-      if (!pwOk(f.pw)) er.pw = "Құпиясөз талапқа сай емес|Пароль не соответствует требованиям|Password does not meet the rules";
-    } else if (!f.pw) er.pw = "Құпиясөзді жазыңыз|Введите пароль|Enter your password";
-    setE(er);
-    if (Object.keys(er).length) return;
-    const r = reg ? register(f.name, f.email, f.pw, role) : signin(f.email, f.pw);
-    if (r.error) { setE({ form: r.error }); return; }
-    router.push(r.role === "EMPLOYER" ? "/employer/applications" : "/profile");
+  const [mode, setMode] = useState<Mode>("register");
+  const [role, setRole] = useState<RegRole>("CANDIDATE");
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  const [pw, setPw] = useState("");
+  const [showPw, setShowPw] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [info, setInfo] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+
+  const rules = checkPassword(pw);
+
+  useEffect(() => {
+    if (!ready || !user) return;
+    if (user.role === "ADMIN") router.replace("/admin/users");
+    else if (user.role === "EMPLOYER") router.replace("/employer/applications");
+    else router.replace("/profile");
+  }, [ready, user, router]);
+
+  async function submit(e: React.FormEvent) {
+    e.preventDefault();
+    setError(null);
+    setInfo(null);
+
+    if (mode === "register") {
+      if (!name.trim()) {
+        setError(t("Аты-жөніңізді жазыңыз|Введите имя|Enter your name"));
+        return;
+      }
+      if (!pwOk(pw)) {
+        setError(t("Құпиясөз талаптарға сай емес|Пароль не соответствует требованиям|Password does not meet the rules"));
+        return;
+      }
+    }
+
+    setBusy(true);
+    try {
+      if (mode === "register") {
+        const r = await register(name.trim(), email.trim(), pw, role);
+        if (r.error) setError(r.error);
+        else setInfo(t("Аккаунт жасалды, кіріп жатырсыз...|Аккаунт создан, входим...|Account created, signing in..."));
+      } else {
+        const r = await signin(email.trim(), pw);
+        if (r.error) setError(r.error);
+      }
+    } finally {
+      setBusy(false);
+    }
   }
 
-  function switchMode(m: "login" | "register") {
-    setMode(m);
-    setE({});
-    setTried(false);
-  }
+  const input = "w-full rounded-xl border border-line bg-bg px-4 py-3 text-ink outline-none focus:border-brand";
+  const label = "mb-1.5 block text-sm font-medium text-ink";
 
   return (
-    <div className="max-w-xl mx-auto grid gap-5">
-      <div>
-        <h1 className="font-bold text-3xl">{t("{b} платформасына қош келдіңіз|Добро пожаловать в {b}|Welcome to {b}").replace("{b}", BRAND)}</h1>
-        <p className="text-mute mt-1">{reg ? t("Аккаунт жасап, рөліңізді таңдаңыз.|Создайте аккаунт и выберите роль.|Create an account and pick your role.") : t("Аккаунтыңызға кіріңіз.|Войдите в свой аккаунт.|Sign in to your account.")}</p>
+    <div className="mx-auto w-full max-w-xl">
+      <h1 className="text-3xl font-bold text-ink">
+        {t("ITalent платформасына қош келдіңіз|Добро пожаловать в ITalent|Welcome to ITalent")}
+      </h1>
+      <p className="mt-2 text-mute">
+        {t("Аккаунт жасап, рөліңізді таңдаңыз.|Создайте аккаунт и выберите роль.|Create an account and pick your role.")}
+      </p>
+
+      <div className="mt-6 flex gap-2">
+        {(["register", "signin"] as Mode[]).map((m) => (
+          <button
+            key={m}
+            type="button"
+            onClick={() => { setMode(m); setError(null); setInfo(null); }}
+            className={`rounded-xl px-5 py-2.5 text-sm font-semibold transition-colors ${
+              mode === m ? "bg-brand text-white" : "border border-line bg-sf text-ink"
+            }`}
+          >
+            {m === "register" ? t("Тіркелу|Регистрация|Sign up") : t("Кіру|Вход|Sign in")}
+          </button>
+        ))}
       </div>
 
-      <div className="flex gap-2">
-        <button className={"btn " + (reg ? "btn-p" : "btn-s")} onClick={() => switchMode("register")}>{t("Тіркелу|Регистрация|Sign up")}</button>
-        <button className={"btn " + (!reg ? "btn-p" : "btn-s")} onClick={() => switchMode("login")}>{t("Кіру|Вход|Sign in")}</button>
-      </div>
-
-      {reg && (
-        <div className="grid sm:grid-cols-2 gap-3">
-          {cards.map((c) => (
-            <button key={c.r} onClick={() => setRole(c.r)} aria-pressed={role === c.r} className="card p-5 text-left" style={role === c.r ? { borderColor: "var(--brand)", background: "var(--soft)" } : undefined}>
-              <p className="font-bold">{t(c.t)}</p>
-              <p className="text-sm text-mute mt-1">{t(c.d)}</p>
+      {mode === "register" && (
+        <div className="mt-6 grid gap-3 sm:grid-cols-2">
+          {([
+            { v: "CANDIDATE", title: t("Мен кандидатпын|Я кандидат|I am a candidate"), desc: t("Тест тапсырамын, резюме жасаймын|Прохожу тесты, создаю резюме|Take tests, build my resume") },
+            { v: "EMPLOYER", title: t("Мен жұмыс берушімін|Я работодатель|I am an employer"), desc: t("Вакансия жариялаймын|Публикую вакансии|Post job openings") },
+          ] as { v: RegRole; title: string; desc: string }[]).map((o) => (
+            <button
+              key={o.v}
+              type="button"
+              onClick={() => setRole(o.v)}
+              className={`rounded-2xl border p-5 text-left transition-colors ${
+                role === o.v ? "border-brand bg-soft" : "border-line bg-sf hover:bg-soft"
+              }`}
+            >
+              <p className="font-semibold text-ink">{o.title}</p>
+              <p className="mt-1 text-sm text-mute">{o.desc}</p>
             </button>
           ))}
         </div>
       )}
 
-      <div className="card p-5 grid gap-4">
-        {reg && (
+      <form onSubmit={submit} className="mt-6 space-y-5 rounded-2xl border border-line bg-sf p-6">
+        {mode === "register" && (
           <div>
-            <label htmlFor="n" className="font-semibold text-sm">{t("Аты-жөні|Имя и фамилия|Full name")}</label>
-            <input id="n" className="inp mt-1" style={bad(e.name)} aria-invalid={!!e.name} value={f.name} onChange={set("name")} />
-            <FieldErr e={e.name} />
+            <label htmlFor="fullname" className={label}>{t("Аты-жөні|Имя и фамилия|Full name")}</label>
+            <input id="fullname" name="fullname" autoComplete="name" className={input} value={name} onChange={(e) => setName(e.target.value)} />
           </div>
         )}
 
         <div>
-          <label htmlFor="e" className="font-semibold text-sm">Email</label>
-          <input id="e" type="email" className="inp mt-1" style={bad(e.email)} aria-invalid={!!e.email} value={f.email} onChange={set("email")} />
-          <FieldErr e={e.email} />
+          <label htmlFor="email" className={label}>Email</label>
+          <input id="email" name="email" type="email" autoComplete="email" className={input} value={email} onChange={(e) => setEmail(e.target.value)} required />
         </div>
 
         <div>
-          <label htmlFor="p" className="font-semibold text-sm">{t("Құпиясөз|Пароль|Password")}</label>
-          <PasswordInput id="p" style={bad(e.pw)} invalid={!!e.pw} value={f.pw} onChange={set("pw")} />
-          {reg ? <div className="mt-2"><PwRules pw={f.pw} strict={tried} /></div> : <FieldErr e={e.pw} />}
+          <label htmlFor="password" className={label}>{t("Құпиясөз|Пароль|Password")}</label>
+          <div className="relative">
+            <input
+              id="password"
+              name="password"
+              type={showPw ? "text" : "password"}
+              autoComplete={mode === "register" ? "new-password" : "current-password"}
+              className={`${input} pr-20`}
+              value={pw}
+              onChange={(e) => setPw(e.target.value)}
+              required
+            />
+            <button
+              type="button"
+              onClick={() => setShowPw((v) => !v)}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-sm font-medium text-brand"
+            >
+              {showPw ? t("Жасыру|Скрыть|Hide") : t("Көрсету|Показать|Show")}
+            </button>
+          </div>
+
+          {mode === "register" && (
+            <ul className="mt-3 space-y-1 text-sm">
+              {[
+                { ok: rules.len, label: t("Кемінде 6 таңба|Минимум 6 символов|At least 6 characters") },
+                { ok: rules.letter, label: t("Әріп|Буква|A letter") },
+                { ok: rules.digit, label: t("Сан|Цифра|A number") },
+                { ok: rules.symbol, label: t("Арнайы таңба|Специальный символ|A special character") },
+              ].map((r) => (
+                <li key={r.label} className={r.ok ? "text-green-600" : "text-mute"}>
+                  {r.ok ? "✓" : "•"} {r.label}
+                </li>
+              ))}
+            </ul>
+          )}
         </div>
 
-        <FieldErr e={e.form} />
-        <button className="btn btn-p" onClick={submit}>{reg ? t("Тіркелу|Зарегистрироваться|Create account") : t("Кіру|Войти|Sign in")}</button>
-        <p className="text-xs text-mute">{t("Бұл демо: деректер тек осы браузерде сақталады.|Это демо: данные хранятся только в этом браузере.|This is a demo: data stays in this browser only.")}</p>
-      </div>
+        {error && (
+          <p className="rounded-xl border border-red-300 bg-red-50 px-4 py-3 text-sm text-red-700">
+            {error}
+          </p>
+        )}
+        {info && (
+          <p className="rounded-xl border border-green-300 bg-green-50 px-4 py-3 text-sm text-green-700">
+            {info}
+          </p>
+        )}
+
+        <button
+          type="submit"
+          disabled={busy}
+          className="w-full rounded-xl bg-brand px-5 py-3 font-semibold text-white transition-opacity disabled:opacity-60"
+        >
+          {busy
+            ? t("Күте тұрыңыз...|Подождите...|Please wait...")
+            : mode === "register"
+              ? t("Аккаунт жасау|Создать аккаунт|Create account")
+              : t("Кіру|Войти|Sign in")}
+        </button>
+      </form>
     </div>
   );
 }
