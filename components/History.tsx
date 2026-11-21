@@ -4,15 +4,11 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useI18n } from "@/lib/i18n";
 import { tests } from "@/lib/data";
 import { seedJobs, fmtLabel, type Job } from "@/lib/jobs";
-import {
-  fetchApplications,
-  fetchFavorites,
-  applyToJob,
-  setFavorite,
-  type AppRow,
-  type AppStatus,
-  type FavRow,
-} from "@/lib/userdata";
+import { useAuth } from "@/lib/auth";
+import { useLocal } from "@/lib/store";
+import { DATA_KEYS } from "@/lib/sections";
+import { APPS_KEY, appCls, appLabel, appStatuses, seedApps, type Application, type AppStatus } from "@/lib/apps";
+import { JOBS_KEY } from "@/lib/jobs";
 import Modal from "./Modal";
 
 type Opt = { v: string; l: string };
@@ -114,39 +110,34 @@ function Tests() {
   );
 }
 
-function ApplicationDetail({ a, onClose }: { a: AppRow; onClose: () => void }) {
-  const { t } = useI18n();
-  const job = seedJobs.find((j) => j.id === a.job_id);
-  const date = new Date(a.created_at).toLocaleDateString("kk-KZ", { day: "numeric", month: "long", year: "numeric" });
+function ApplicationDetail({ application, job, onClose }: { application: Application; job?: Job; onClose: () => void }) {
+  const { t, lang } = useI18n();
   const steps = [t("Жіберілді|Отправлено|Sent"), t("Қаралды|Просмотрено|Viewed"), t("Нәтиже|Результат|Result")];
+  const progress: Record<AppStatus, number> = { NEW: 0, VIEWED: 1, INTERVIEW: 2, HIRED: 2, REJECTED: 2 };
+  const date = application.date || new Date().toLocaleDateString(lang === "kk" ? "kk-KZ" : lang === "ru" ? "ru-RU" : "en-US");
   return (
-    <Modal open onClose={onClose} title={a.job_title} wide>
+    <Modal open onClose={onClose} title={t(application.vacancy)} wide>
       <div className="grid gap-4">
         <div className="flex flex-wrap items-center gap-3 text-sm text-mute">
-          <span>{a.company}</span><span>·</span><span>{date}</span>
-          <span className={"chip " + APP_CLS[a.status]}>{t(APP_LABEL[a.status])}</span>
+          <span>{t(application.company)}</span><span>·</span><span>{date}</span>
+          <span className={"chip " + appCls[application.status]}>{t(appLabel[application.status])}</span>
         </div>
-
         <div className="grid grid-cols-3 gap-2">
           {steps.map((label, i) => (
             <div key={i} className="grid gap-1">
-              <span className={"h-1.5 rounded-full " + (i <= APP_STEP[a.status] ? "bg-brand" : "bg-line")} />
+              <span className={"h-1.5 rounded-full " + (i <= progress[application.status] ? "bg-brand" : "bg-line")} />
               <span className="text-xs text-mute">{label}</span>
             </div>
           ))}
         </div>
-
         <div>
           <h3 className="mb-2 font-semibold">{t("Сіз жазған хат|Ваше сопроводительное письмо|Your cover letter")}</h3>
-          <p className="whitespace-pre-line rounded-xl bg-soft p-4 text-sm">
-            {a.letter || t("Хат жазылмаған|Письмо не написано|No letter")}
-          </p>
+          <p className="whitespace-pre-line rounded-xl bg-soft p-4 text-sm">{t(application.cover) || t("Хат жазылмаған|Письмо не написано|No letter")}</p>
         </div>
-
         {job && (
           <>
             <p className="text-sm text-mute">{t(job.desc)}</p>
-            <Link href={"/jobs/" + job.id} className="justify-self-start rounded-xl border border-line px-4 py-2 text-sm hover:bg-soft">
+            <Link href={`/jobs?job=${encodeURIComponent(job.id)}`} onClick={onClose} className="justify-self-start rounded-xl border border-line px-4 py-2 text-sm hover:bg-soft">
               {t("Вакансияға өту|Перейти к вакансии|Open vacancy")}
             </Link>
           </>
@@ -158,115 +149,57 @@ function ApplicationDetail({ a, onClose }: { a: AppRow; onClose: () => void }) {
 
 function Applications() {
   const { t } = useI18n();
-  const [rows, setRows] = useState<AppRow[]>([]);
-  const [err, setErr] = useState<string | null>(null);
+  const { user } = useAuth();
+  const [rows] = useLocal<Application[]>(APPS_KEY, seedApps);
+  const [mine] = useLocal<Job[]>(JOBS_KEY, []);
   const [f, setF] = useState("all");
   const [s, setS] = useState("new");
-  const [sel, setSel] = useState<AppRow | null>(null);
-
-  useEffect(() => {
-    fetchApplications().then(setRows).catch((e) => setErr((e as Error).message));
-  }, []);
-
-  const base = rows.filter((a) => f === "all" || a.status === f);
+  const [sel, setSel] = useState<{ application: Application; job?: Job } | null>(null);
+  const all = rows.filter((a) => a.email === user?.email);
+  const base = all.filter((a) => f === "all" || a.status === f);
   const list = s === "old" ? [...base].reverse() : base;
-  const keys: ("all" | AppStatus)[] = ["all", "NEW", "VIEWED", "INTERVIEW", "REJECTED"];
+  const keys: ("all" | AppStatus)[] = ["all", ...appStatuses];
+  const jobs = [...mine, ...seedJobs];
 
   return (
     <div className="pt-4">
       <Toolbar value={f} onChange={setF} sort={s} onSort={setS}
-        chips={keys.map((v) => ({ v, l: v === "all" ? t("Барлығы|Все|All") : t(APP_LABEL[v]) }))}
+        chips={keys.map((v) => ({ v, l: v === "all" ? t("Барлығы|Все|All") : t(appLabel[v]) }))}
         sorts={[
           { v: "new", l: t("Жаңасы бірінші|Сначала новые|Newest first") },
           { v: "old", l: t("Ескісі бірінші|Сначала старые|Oldest first") },
         ]} />
-      {err && <p className="mb-3 rounded-xl bg-red-500/10 px-4 py-3 text-sm text-red-500">{err}</p>}
       <div className="grid gap-3">
-        {list.map((a) => (
-          <button key={a.id} onClick={() => setSel(a)} className="flex flex-wrap items-center gap-3 rounded-xl border border-line p-4 text-left hover:bg-soft">
+        {list.map((application) => (
+          <button key={application.id} onClick={() => setSel({ application, job: jobs.find((j) => j.id === application.vacancyId) })} className="flex flex-wrap items-center gap-3 rounded-xl border border-line p-4 text-left hover:bg-soft">
             <div className="grow">
-              <h3 className="font-semibold">{a.job_title}</h3>
-              <p className="text-sm text-mute">{a.company}</p>
+              <h3 className="font-semibold">{t(application.vacancy)}</h3>
+              <p className="text-sm text-mute">{t(application.company)}</p>
             </div>
-            <span className="text-sm text-mute">{new Date(a.created_at).toLocaleDateString("kk-KZ", { day: "numeric", month: "short" })}</span>
-            <span className={"chip " + APP_CLS[a.status]}>{t(APP_LABEL[a.status])}</span>
+            <span className="text-sm text-mute">{application.date}</span>
+            <span className={"chip " + appCls[application.status]}>{t(appLabel[application.status])}</span>
           </button>
         ))}
       </div>
-      {!list.length && !err && <p className="py-8 text-center text-mute">{t("Бұл күйде өтінім жоқ.|Заявок с таким статусом нет.|No applications with this status.")}</p>}
-      {sel && <ApplicationDetail a={sel} onClose={() => setSel(null)} />}
+      {!list.length && <p className="py-8 text-center text-mute">{t("Әлі өтінім жіберілмеген.|Откликов пока нет.|No applications yet.")}</p>}
+      {sel && <ApplicationDetail application={sel.application} job={sel.job} onClose={() => setSel(null)} />}
     </div>
   );
 }
 
-function SavedDetail({ job, onClose, onChanged }: { job: Job; onClose: () => void; onChanged: () => void }) {
+function SavedDetail({ job, onClose, onRemove }: { job: Job; onClose: () => void; onRemove: () => void }) {
   const { t } = useI18n();
-  const [letter, setLetter] = useState("");
-  const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
-  const [busy, setBusy] = useState(false);
-  const L = (s: string) => (s.includes("|") ? t(s) : s);
-
-  async function apply() {
-    setBusy(true);
-    setMsg(null);
-    try {
-      await applyToJob({ id: job.id, title: L(job.title), company: job.company }, letter.trim());
-      setMsg({ ok: true, text: t("Өтінім жіберілді|Заявка отправлена|Application sent") });
-      onChanged();
-    } catch (e) {
-      setMsg({ ok: false, text: (e as Error).message });
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  async function remove() {
-    setBusy(true);
-    try {
-      await setFavorite(job.id, false);
-      onChanged();
-      onClose();
-    } catch (e) {
-      setMsg({ ok: false, text: (e as Error).message });
-      setBusy(false);
-    }
-  }
-
   return (
-    <Modal open onClose={onClose} title={L(job.title)} wide>
+    <Modal open onClose={onClose} title={t(job.title)} wide>
       <div className="grid gap-4">
-        <p className="text-sm text-mute">
-          {job.company} · {L(job.city)} · {t(fmtLabel[job.format])} · {job.level}
-        </p>
+        <p className="text-sm text-mute">{t(job.company)} · {t(job.city)} · {t(fmtLabel[job.format])} · {t(job.level)}</p>
         <p className="text-lg font-bold text-brand">{job.salary}</p>
+        <div className="flex flex-wrap gap-2">{job.tags.map((tag) => <span key={tag} className="chip c-i">{tag}</span>)}</div>
+        <div><h3 className="mb-1 font-semibold">{t("Сипаттама|Описание|Description")}</h3><p className="text-sm text-mute">{t(job.desc)}</p></div>
+        <div><h3 className="mb-1 font-semibold">{t("Талаптар|Требования|Requirements")}</h3><ul className="grid list-disc gap-1 pl-5 text-sm text-mute">{job.reqs.map((req) => <li key={req}>{t(req)}</li>)}</ul></div>
         <div className="flex flex-wrap gap-2">
-          {job.tags.map((tg) => <span key={tg} className="chip c-i">{tg}</span>)}
-        </div>
-        <p className="text-sm">{t(job.desc)}</p>
-        <ul className="grid list-disc gap-1 pl-5 text-sm">
-          {job.reqs.map((r) => <li key={r}>{L(r)}</li>)}
-        </ul>
-
-        <div className="grid gap-2">
-          <label className="text-sm font-medium">{t("Сопроводительное хат|Сопроводительное письмо|Cover letter")}</label>
-          <textarea
-            value={letter}
-            onChange={(e) => setLetter(e.target.value)}
-            rows={4}
-            className="inp"
-            placeholder={t("Өзіңіз туралы қысқаша жазыңыз|Коротко расскажите о себе|Briefly introduce yourself")}
-          />
-        </div>
-
-        {msg && <p className={"text-sm " + (msg.ok ? "text-brand" : "text-red-500")}>{msg.text}</p>}
-
-        <div className="flex flex-wrap gap-2">
-          <button onClick={apply} disabled={busy} className="btn btn-primary disabled:opacity-50">
-            {t("Өтінім беру|Откликнуться|Apply")}
-          </button>
-          <button onClick={remove} disabled={busy} className="btn disabled:opacity-50">
-            {t("Таңдаулыдан алып тастау|Убрать из избранного|Remove from saved")}
-          </button>
+          <Link href={`/jobs?job=${encodeURIComponent(job.id)}`} onClick={onClose} className="btn btn-p">{t("Вакансияға өту|Перейти к вакансии|Open vacancy")}</Link>
+          <button onClick={onRemove} className="btn btn-s">{t("Таңдаулыдан алып тастау|Убрать из избранного|Remove from favorites")}</button>
         </div>
       </div>
     </Modal>
@@ -275,48 +208,41 @@ function SavedDetail({ job, onClose, onChanged }: { job: Job; onClose: () => voi
 
 function Saved() {
   const { t } = useI18n();
-  const [favs, setFavs] = useState<FavRow[]>([]);
-  const [err, setErr] = useState<string | null>(null);
+  const { user } = useAuth();
+  const [ids, saveIds] = useLocal<string[]>(DATA_KEYS.saved(user?.email ?? ""), []);
+  const [mine] = useLocal<Job[]>(JOBS_KEY, []);
   const [f, setF] = useState("all");
   const [s, setS] = useState("high");
   const [sel, setSel] = useState<Job | null>(null);
   const tr = useTr();
 
-  const load = useCallback(() => {
-    fetchFavorites().then(setFavs).catch((e) => setErr((e as Error).message));
-  }, []);
-  useEffect(() => { load(); }, [load]);
-
-  const jobs = favs
-    .map((x) => seedJobs.find((j) => j.id === x.job_id))
-    .filter((j): j is Job => !!j);
+  const jobs = [...mine, ...seedJobs].filter((job) => ids.includes(job.id));
   const rows = jobs
-    .filter((j) => f === "all" || j.level === f)
+    .filter((job) => f === "all" || job.level === f)
     .sort((a, b) => (s === "high" ? salaryNum(b) - salaryNum(a) : salaryNum(a) - salaryNum(b)));
 
   return (
     <div className="pt-4">
       <Toolbar value={f} onChange={setF} sort={s} onSort={setS}
-        chips={["all", "Тағылымдама", "Junior", "Middle"].map((v) => ({ v, l: v === "all" ? t("Барлығы|Все|All") : tr(v) }))}
+        chips={ ["all", "Тағылымдама", "Junior", "Middle"].map((v) => ({ v, l: v === "all" ? t("Барлығы|Все|All") : tr(v) }))}
         sorts={[
           { v: "high", l: t("Жалақы: жоғарыдан төмен|Зарплата: по убыванию|Salary: high to low") },
           { v: "low", l: t("Жалақы: төменнен жоғары|Зарплата: по возрастанию|Salary: low to high") },
         ]} />
-      {err && <p className="mb-3 rounded-xl bg-red-500/10 px-4 py-3 text-sm text-red-500">{err}</p>}
       <div className="grid gap-3">
-        {rows.map((j) => (
-          <button key={j.id} onClick={() => setSel(j)} className="flex flex-wrap items-center gap-3 rounded-xl border border-line p-4 text-left hover:bg-soft">
+        {rows.map((job) => (
+          <button key={job.id} onClick={() => setSel(job)} className="flex flex-wrap items-center gap-3 rounded-xl border border-line p-4 text-left hover:bg-soft">
             <div className="grow">
-              <h3 className="font-semibold">{tr(j.title)}</h3>
-              <p className="text-sm text-mute">{j.company} · {tr(j.city)}</p>
+              <h3 className="font-semibold">{tr(job.title)}</h3>
+              <p className="text-sm text-mute">{job.company} · {tr(job.city)}</p>
             </div>
-            <span className="chip c-i">{tr(j.level)}</span>
-            <span className="font-bold text-brand">{j.salary}</span>
+            <span className="chip c-i">{tr(job.level)}</span>
+            <span className="font-bold text-brand">{job.salary}</span>
           </button>
         ))}
       </div>
-      {!rows.length && !err && <p className="py-8 text-center text-mute">{t("Сақталған вакансия жоқ.|Сохранённых вакансий нет.|No saved jobs.")}</p>}
-      {sel && <SavedDetail job={sel} onClose={() => setSel(null)} onChanged={load} />}
+      {!rows.length && <p className="py-8 text-center text-mute">{t("Сақталған вакансия жоқ.|Сохранённых вакансий нет.|No saved jobs.")}</p>}
+      {sel && <SavedDetail job={sel} onClose={() => setSel(null)} onRemove={() => { saveIds(ids.filter((id) => id !== sel.id)); setSel(null); }} />}
     </div>
   );
 }

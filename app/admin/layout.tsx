@@ -11,6 +11,7 @@ const NAV = [
   { href: "/admin/applications", label: "Өтінімдер|Заявки|Applications" },
   { href: "/admin/stats", label: "Статистика|Статистика|Statistics" },
   { href: "/admin/content", label: "Сайт мәтіндері|Тексты сайта|Site text" },
+  { href: "/admin/assessments", label: "Тесттер мен сауалнамалар|Тесты и опросы|Tests and surveys" },
   { href: "/admin/logs", label: "Журнал|Журнал|Activity log" },
 ];
 
