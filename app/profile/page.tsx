@@ -1,7 +1,6 @@
 "use client";
 import Link from "next/link";
 import BugHunt, { type Daily } from "@/components/BugHunt";
-import History from "@/components/History";
 import SkillPlanets, { type Skill } from "@/components/SkillPlanets";
 import { useAuth } from "@/lib/auth";
 import { useI18n } from "@/lib/i18n";
@@ -64,7 +63,7 @@ export default function ProfilePage() {
         </Link>
       </div>
 
-      {/* ОҢ: тапсырмалар, бөлімдер, тарих */}
+      {/* ОҢ: тапсырмалар, бөлімдер */}
       <div className="min-w-0 space-y-8">
         <section>
           <h2 className="text-lg font-bold text-ink">{t("Бастапқы тапсырмалар|Стартовые квесты|Starter quests")}</h2>
@@ -102,7 +101,6 @@ export default function ProfilePage() {
         </section>
 
         <BugHunt daily={daily} onChange={saveDaily} />
-        <History />
       </div>
     </div>
   );
