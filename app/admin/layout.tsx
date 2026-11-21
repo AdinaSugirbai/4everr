@@ -6,13 +6,18 @@ import { useAuth } from "@/lib/auth";
 import { useI18n } from "@/lib/i18n";
 
 const NAV = [
-  { href: "/admin/users", label: "Пайдаланушылар|Пользователи|Users" },
+  { href: "/admin", label: "Басты бет|Главная|Dashboard", exact: true },
+  { href: "/admin/users", label: "Қолданушылар|Пользователи|Users" },
+  { href: "/admin/employers", label: "Жұмыс берушілер|Работодатели|Employers" },
   { href: "/admin/vacancies", label: "Вакансиялар|Вакансии|Vacancies" },
+  { href: "/admin/directions", label: "IT бағыттары|IT-направления|IT Directions" },
   { href: "/admin/applications", label: "Өтінімдер|Заявки|Applications" },
-  { href: "/admin/stats", label: "Статистика|Статистика|Statistics" },
+  { href: "/admin/reviews", label: "Пікірлер|Отзывы|Reviews & Feedback" },
+  { href: "/admin/reports", label: "Есептер|Отчёты|Reports" },
   { href: "/admin/content", label: "Сайт мәтіндері|Тексты сайта|Site text" },
   { href: "/admin/assessments", label: "Тесттер мен сауалнамалар|Тесты и опросы|Tests and surveys" },
   { href: "/admin/logs", label: "Журнал|Журнал|Activity log" },
+  { href: "/admin/settings", label: "Баптаулар|Настройки|Settings" },
 ];
 
 export default function AdminLayout({ children }: { children: ReactNode }) {
@@ -39,7 +44,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
               key={n.href}
               href={n.href}
               className={`rounded-xl px-3 py-2 text-sm ${
-                path.startsWith(n.href) ? "bg-brand text-white" : "text-ink hover:bg-soft"
+                (n.exact ? path === n.href : path.startsWith(n.href)) ? "bg-brand text-white" : "text-ink hover:bg-soft"
               }`}
             >
               {t(n.label)}
