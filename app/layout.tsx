@@ -3,6 +3,7 @@ import { Suspense } from "react";
 import { Onest } from "next/font/google";
 import Header from "@/components/Header";
 import AuthGate from "@/components/AuthGate";
+import VisitTracker from "@/components/VisitTracker";
 import { AuthProvider } from "@/lib/auth";
 import { I18nProvider } from "@/lib/i18n";
 import { BRAND } from "@/lib/brand";
@@ -18,6 +19,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body>
         <I18nProvider>
           <AuthProvider>
+            <VisitTracker />
             <Suspense fallback={<div className="h-14 border-b border-line bg-sf" />}>
               <Header />
             </Suspense>
