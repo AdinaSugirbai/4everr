@@ -1,5 +1,5 @@
 "use client";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { supabase } from "@/lib/supabase/client";
 import { setVacancyStatus, deleteVacancy, updateVacancy } from "@/lib/admin";
 import { useI18n } from "@/lib/i18n";
@@ -13,6 +13,9 @@ type V = {
   level: string;
   status: "ACTIVE" | "PAUSED";
   created_at: string;
+  moderation: "PENDING" | "APPROVED" | "REJECTED";
+  expires_at: string | null;
+  views: number;
 };
 type Filter = "ALL" | "ACTIVE" | "PAUSED";
 
@@ -21,13 +24,18 @@ export default function AdminVacancies() {
   const [filter, setFilter] = useState<Filter>("ALL");
   const [drafts, setDrafts] = useState<Record<string, Pick<V, "title" | "company" | "city" | "salary" | "level">>>({});
   const { t } = useI18n();
+  const expiry = useRef<Record<string, string>>({});
+  const moderate = async (id: string, m: V["moderation"], date: string) => {
+    const { error } = await supabase().rpc("admin_set_vacancy_moderation", { target: id, new_moderation: m, new_expires: date ? new Date(date).toISOString() : null });
+    if (error) throw error;
+  };
   const [err, setErr] = useState<string | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     const base = supabase()
       .from("vacancies")
-      .select("id, title, company, city, salary, level, status, created_at")
+      .select("id, title, company, city, salary, level, status, created_at, moderation, expires_at, views")
       .order("created_at", { ascending: false });
     const { data, error } = filter === "ALL" ? await base : await base.eq("status", filter);
     if (error) setErr(error.message);
@@ -84,6 +92,7 @@ export default function AdminVacancies() {
               <th className="px-4 py-3">{t("Деңгей|Уровень|Level")}</th>
               <th className="px-4 py-3">{t("Жалақы|Зарплата|Salary")}</th>
               <th className="px-4 py-3">{t("Күйі|Статус|Status")}</th>
+              <th className="px-4 py-3">{t("Тексеру және мерзім|Модерация и срок|Moderation & expiry")}</th>
               <th className="px-4 py-3">{t("Әрекет|Действия|Actions")}</th>
             </tr>
           </thead>
@@ -101,6 +110,18 @@ export default function AdminVacancies() {
                   <span className={r.status === "ACTIVE" ? "text-brand" : "text-amber-500"}>
                     {r.status === "ACTIVE" ? t("Белсенді|Активная|Active") : t("Тоқтатылған|Приостановлена|Paused")}
                   </span>
+                </td>
+                <td className="px-4 py-3">
+                  <div className="flex min-w-48 flex-col gap-2">
+                    <span className={r.moderation === "APPROVED" ? "text-brand" : r.moderation === "PENDING" ? "text-amber-500" : "text-red-500"}>
+                      {r.moderation === "APPROVED" ? t("Рұқсат етілген|Одобрена|Approved") : r.moderation === "PENDING" ? t("Тексеруде|На проверке|Pending") : t("Қабылданбады|Отклонена|Rejected")} · 👁 {r.views}
+                    </span>
+                    <input type="date" aria-label={t("Жарамдылық мерзімі|Срок действия|Valid until")} defaultValue={r.expires_at?.slice(0, 10) ?? ""} onChange={(e) => (expiry.current[r.id] = e.target.value)} className="rounded-lg border border-line bg-bg px-2 py-1 text-ink" />
+                    <div className="flex gap-2">
+                      <button disabled={busy === r.id} onClick={() => run(r.id, () => moderate(r.id, "APPROVED", expiry.current[r.id] ?? r.expires_at?.slice(0, 10) ?? ""))} className="rounded-lg bg-brand px-3 py-1 text-white disabled:opacity-40">{t("Рұқсат ету|Одобрить|Approve")}</button>
+                      <button disabled={busy === r.id} onClick={() => run(r.id, () => moderate(r.id, "REJECTED", expiry.current[r.id] ?? r.expires_at?.slice(0, 10) ?? ""))} className="rounded-lg border border-line px-3 py-1 text-ink hover:bg-soft disabled:opacity-40">{t("Қабылдамау|Отклонить|Reject")}</button>
+                    </div>
+                  </div>
                 </td>
                 <td className="px-4 py-3">
                   <div className="flex flex-wrap gap-2">
@@ -134,7 +155,7 @@ export default function AdminVacancies() {
               </tr>
             );})}
             {rows.length === 0 && !err && (
-              <tr><td colSpan={7} className="px-4 py-6 text-center text-mute">{t("Вакансия жоқ.|Вакансий нет.|No vacancies.")}</td></tr>
+              <tr><td colSpan={8} className="px-4 py-6 text-center text-mute">{t("Вакансия жоқ.|Вакансий нет.|No vacancies.")}</td></tr>
             )}
           </tbody>
         </table>
