@@ -11,7 +11,8 @@ const home: Record<Role, string> = {
 };
 
 function need(path: string): Need {
-  if (path.startsWith("/start")) return "PUBLIC";
+  // /start is the sign-in page; /feedback is shown to everyone and asks visitors to sign in inside the page.
+  if (path.startsWith("/start") || path.startsWith("/feedback")) return "PUBLIC";
   if (path.startsWith("/admin")) return "ADMIN";
   if (path.startsWith("/employer")) return "EMPLOYER";
   if (["/profile", "/resume", "/me", "/jobs"].some((p) => path.startsWith(p))) return "CANDIDATE";
