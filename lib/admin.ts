@@ -53,3 +53,21 @@ export async function deleteApplication(id: string) {
   const { error } = await supabase().rpc("admin_delete_application", { target: id });
   if (error) throw error;
 }
+
+/**
+ * Sets a new password for another user. The old password cannot be read: Supabase stores only a hash.
+ * The browser sends the admin's session cookie; the server checks the role and does the change.
+ * Throws an Error whose message is an error code (see PW_ERRORS in app/admin/users/page.tsx).
+ */
+export async function setUserPassword(userId: string, password: string) {
+  const res = await fetch("/api/admin/set-password", {
+    method: "POST",
+    credentials: "same-origin",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ userId, password }),
+  });
+  if (!res.ok) {
+    const data = (await res.json().catch(() => ({}))) as { error?: string };
+    throw new Error(data.error ?? "failed");
+  }
+}
