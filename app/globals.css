@@ -52,4 +52,5 @@ body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset
 @media (prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important}}
 :root[data-theme="light"]{color-scheme:light}
 :root[data-theme="dark"]{color-scheme:dark}
+.seg.seg-sm span{padding:6px 10px;min-height:34px;font-size:12px;font-weight:700;letter-spacing:.04em}
 
