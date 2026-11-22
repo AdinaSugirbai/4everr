@@ -87,17 +87,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const signin: Ctx["signin"] = async (email, pw) => {
-    const { data, error } = await supabase().auth.signInWithPassword({ email, password: pw });
-    if (error || !data.user) return { error: E_WRONG, role: null };
-    const p = await loadProfile(data.user.id, email);
-    if (!p) return { error: E_WRONG, role: null };
-    if (p.banned) {
-      await supabase().auth.signOut();
-      return { error: E_BANNED, role: null };
-    }
-    setUser(p);
-    return { error: null, role: p.role };
-  };
+  const { data, error } = await supabase().auth.signInWithPassword({ email, password: pw });
+  if (error) return { error: error.message, role: null };
+  if (!data.user) return { error: E_WRONG, role: null };
+  const p = await loadProfile(data.user.id, email);
+  if (!p) return { error: "Профиль табылмады", role: null };
+  if (p.banned) {
+    await supabase().auth.signOut();
+    return { error: E_BANNED, role: null };
+  }
+  setUser(p);
+  return { error: null, role: p.role };
+};
 
   const logout = async () => {
     await supabase().auth.signOut();
