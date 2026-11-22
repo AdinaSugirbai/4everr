@@ -1,69 +1,127 @@
 "use client";
-import Link from "next/link";
-import { useState } from "react";
-import { useI18n } from "@/lib/i18n";
-import { useLocal } from "@/lib/store";
-import Modal from "@/components/Modal";
-import { APPS_KEY, appCls, appLabel, appStatuses, seedApps, type AppStatus, type Application } from "@/lib/apps";
-import { initials } from "@/lib/ui";
-import { burst, toast } from "@/lib/fx";
+import { useCallback, useEffect, useState } from "react";
+import { supabase } from "@/lib/supabase/client";
 
-export default function ApplicationsPage() {
-  const { t } = useI18n();
-  const [apps, save] = useLocal<Application[]>(APPS_KEY, seedApps);
-  const [f, setF] = useState<"ALL" | AppStatus>("ALL");
-  const [sel, setSel] = useState<number | null>(null);
-  const o = apps.find((a) => a.id === sel);
-  const list = apps.filter((a) => f === "ALL" || a.status === f);
+type Row = {
+  id: string;
+  job_title: string;
+  company: string;
+  status: string;
+  letter: string | null;
+  created_at: string;
+  name: string | null;
+  email: string | null;
+  position: string | null;
+  city: string | null;
+  phone: string | null;
+  about: string | null;
+  education: string | null;
+  skills: unknown;
+  photo: string | null;
+  cover: string | null;
+};
 
-  function setStatus(id: number, s: AppStatus) { save(apps.map((a) => (a.id === id ? { ...a, status: s } : a))); }
-  function open(a: Application) { setSel(a.id); if (a.status === "NEW") setStatus(a.id, "VIEWED"); }
-  function mark(s: AppStatus, e: React.MouseEvent<HTMLButtonElement>) {
-    if (!o) return;
-    setStatus(o.id, s);
-    if (s === "HIRED") burst(e.currentTarget);
-    toast(t("Күй өзгертілді|Статус изменён|Status updated"), t(appLabel[s]));
+const STATUSES: { v: string; label: string }[] = [
+  { v: "NEW", label: "Жаңа" },
+  { v: "VIEWED", label: "Қаралды" },
+  { v: "INTERVIEW", label: "Сұхбатқа шақырылды" },
+  { v: "HIRED", label: "Қабылданды" },
+  { v: "REJECTED", label: "Бас тартылды" },
+];
+
+function skillsText(s: unknown) {
+  if (Array.isArray(s)) return s.join(", ");
+  if (s == null || s === "") return "—";
+  return JSON.stringify(s);
+}
+
+export default function EmployerApplications() {
+  const [rows, setRows] = useState<Row[]>([]);
+  const [err, setErr] = useState<string | null>(null);
+  const [busy, setBusy] = useState<string | null>(null);
+  const [open, setOpen] = useState<string | null>(null);
+
+  const load = useCallback(async () => {
+    const { data, error } = await supabase()
+      .from("applications")
+      .select("id, job_title, company, status, letter, created_at, name, email, position, city, phone, about, education, skills, photo, cover")
+      .order("created_at", { ascending: false });
+    if (error) setErr(error.message);
+    else setRows((data ?? []) as Row[]);
+  }, []);
+
+  useEffect(() => { load(); }, [load]);
+
+  async function changeStatus(id: string, status: string) {
+    setBusy(id);
+    setErr(null);
+    const { error } = await supabase().from("applications").update({ status }).eq("id", id);
+    if (error) setErr(error.message);
+    await load();
+    setBusy(null);
   }
 
   return (
-    <>
-      <h1 className="font-bold text-2xl">{t("Келген өтінімдер|Полученные заявки|Applications")}</h1>
-      <div className="flex flex-wrap gap-2 mt-4 mb-5">
-        <button className={"btn " + (f === "ALL" ? "btn-p" : "btn-s")} onClick={() => setF("ALL")}>{t("Барлығы|Все|All")} · {apps.length}</button>
-        {appStatuses.map((s) => (<button key={s} className={"btn " + (f === s ? "btn-p" : "btn-s")} onClick={() => setF(s)}>{t(appLabel[s])} · {apps.filter((a) => a.status === s).length}</button>))}
-      </div>
-      {list.length === 0 && <p className="text-mute">{t("Өтінім жоқ.|Заявок нет.|No applications.")}</p>}
-      <div className="grid md:grid-cols-2 gap-4">
-        {list.map((a) => (
-          <button key={a.id} onClick={() => open(a)} className="card p-4 text-left hover:bg-soft flex gap-3 items-center">
-            <span className="w-12 h-12 shrink-0 rounded-full bg-soft overflow-hidden grid place-items-center text-brand font-bold">{a.photo ? <img src={a.photo} alt="" className="w-full h-full object-cover" /> : initials(a.name)}</span>
-            <span className="grow min-w-0">
-              <span className="flex items-start justify-between gap-2"><span className="font-semibold truncate">{a.name}</span><span className={"chip " + appCls[a.status]}>{t(appLabel[a.status])}</span></span>
-              <span className="block text-sm text-mute truncate">{t(a.vacancy)}</span>
-              <span className="block text-xs text-mute">{a.date}</span>
-            </span>
-          </button>
-        ))}
-      </div>
+    <div className="space-y-4">
+      <h1 className="text-2xl font-bold text-ink">Өтінімдер ({rows.length})</h1>
+      {err && <p className="rounded-xl bg-red-500/10 px-4 py-3 text-sm text-red-500">{err}</p>}
 
-      <Modal open={!!o} onClose={() => setSel(null)} title={o ? o.name : ""} wide>
-        {o && (
-          <>
-            <div className="flex items-center gap-4">
-              <span className="w-20 h-20 rounded-full bg-soft overflow-hidden grid place-items-center text-brand font-bold text-xl">{o.photo ? <img src={o.photo} alt="" className="w-full h-full object-cover" /> : initials(o.name)}</span>
-              <div className="text-sm"><p className="font-semibold">{o.position} · {t(o.city)}</p><p className="text-mute">{o.email} · {o.phone}</p><p className="text-mute">{t(o.vacancy)} · {o.date}</p></div>
+      <div className="grid gap-3">
+        {rows.map((r) => (
+          <div key={r.id} className="rounded-2xl border border-line bg-sf p-5">
+            <div className="flex flex-wrap items-start justify-between gap-3">
+              <div className="min-w-0">
+                <p className="font-semibold text-ink">{r.name || "Аты жоқ"}</p>
+                <p className="text-sm text-mute">{r.position || "—"} · {r.city || "—"}</p>
+                <p className="mt-2 text-sm text-ink">Вакансия: {r.job_title}</p>
+                <p className="text-xs text-mute">{new Date(r.created_at).toLocaleDateString("kk-KZ")}</p>
+              </div>
+              <select
+                value={r.status}
+                disabled={busy === r.id}
+                onChange={(e) => changeStatus(r.id, e.target.value)}
+                className="rounded-lg border border-line bg-bg px-2 py-1 text-ink"
+              >
+                {STATUSES.map((s) => (
+                  <option key={s.v} value={s.v}>{s.label}</option>
+                ))}
+              </select>
             </div>
-            <div><h3 className="font-semibold mb-1">{t("Өзі туралы|О себе|About")}</h3><p className="text-mute">{t(o.about)}</p></div>
-            <div><h3 className="font-semibold mb-1">{t("Білім|Образование|Education")}</h3><p className="text-mute">{t(o.education)}</p></div>
-            <div><h3 className="font-semibold mb-2">{t("Дағдылар|Навыки|Skills")}</h3>
-              <div className="grid gap-2">{o.skills.map((s, i) => (<div key={i}><div className="flex justify-between text-sm"><span>{s.name}</span><span className="text-mute">{s.level}%</span></div><div className="h-2 rounded-full bg-line overflow-hidden"><div className="h-full bg-brand" style={{ width: s.level + "%" }} /></div></div>))}</div></div>
-            <div><h3 className="font-semibold mb-1">{t("Қысқаша хат|Сопроводительное письмо|Cover letter")}</h3><p className="text-mute">{t(o.cover)}</p></div>
-            <div><h3 className="font-semibold mb-2">{t("Күйді белгілеу|Установить статус|Set status")}</h3>
-              <div className="flex flex-wrap gap-2">{appStatuses.map((s) => (<button key={s} aria-pressed={o.status === s} className={"btn " + (o.status === s ? "btn-p" : "btn-s")} onClick={(e) => mark(s, e)}>{t(appLabel[s])}</button>))}</div></div>
-            <Link href="/employer/offers" className="btn btn-s w-fit">{t("Ұсыныс жіберуге өту|Перейти к отправке предложения|Go to send an offer")}</Link>
-          </>
-        )}
-      </Modal>
-    </>
+
+            <button
+              onClick={() => setOpen(open === r.id ? null : r.id)}
+              className="mt-3 text-sm text-brand underline-offset-2 hover:underline"
+            >
+              {open === r.id ? "Толығырақ жасыру" : "Кандидат туралы толығырақ"}
+            </button>
+
+            {open === r.id && (
+              <div className="mt-3 grid gap-3 text-sm">
+                {r.photo && <img src={r.photo} alt="" className="h-20 w-20 rounded-xl object-cover" />}
+                <p><span className="text-mute">Email:</span> {r.email || "—"}</p>
+                <p><span className="text-mute">Телефон:</span> {r.phone || "—"}</p>
+                <p><span className="text-mute">Білімі:</span> {r.education || "—"}</p>
+                <p><span className="text-mute">Дағдылары:</span> {skillsText(r.skills)}</p>
+                <div>
+                  <p className="text-mute">Өзі туралы:</p>
+                  <p className="whitespace-pre-line">{r.about || "—"}</p>
+                </div>
+                <div>
+                  <p className="text-mute">Сопроводительное хат:</p>
+                  <p className="whitespace-pre-line rounded-xl bg-soft p-4">{r.letter || "Хат жазылмаған"}</p>
+                </div>
+                {r.cover && (
+                  <div>
+                    <p className="text-mute">Cover:</p>
+                    <p className="whitespace-pre-line rounded-xl bg-soft p-4">{r.cover}</p>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        ))}
+        {rows.length === 0 && !err && <p className="py-8 text-center text-mute">Өтінім жоқ.</p>}
+      </div>
+    </div>
   );
 }
