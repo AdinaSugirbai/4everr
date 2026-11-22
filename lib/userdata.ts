@@ -59,3 +59,36 @@ export async function setFavorite(jobId: string, on: boolean) {
     : await client.from("favorites").delete().eq("candidate_id", uid).eq("job_id", jobId);
   if (res.error) throw res.error;
 }
+export type PublicVacancy = {
+  id: string;
+  title: string;
+  company: string;
+  city: string;
+  format: string;
+  salary: string;
+  level: string;
+  tags: string[];
+  description: string;
+  status: "ACTIVE" | "PAUSED";
+  created_at: string;
+};
+
+export async function fetchActiveVacancies(): Promise<PublicVacancy[]> {
+  const { data, error } = await supabase()
+    .from("vacancies")
+    .select("id, title, company, city, format, salary, level, tags, description, status, created_at")
+    .eq("status", "ACTIVE")
+    .order("created_at", { ascending: false });
+  if (error) throw error;
+  return (data ?? []) as PublicVacancy[];
+}
+
+export async function fetchVacancy(id: string): Promise<PublicVacancy | null> {
+  const { data, error } = await supabase()
+    .from("vacancies")
+    .select("id, title, company, city, format, salary, level, tags, description, status, created_at")
+    .eq("id", id)
+    .maybeSingle();
+  if (error) throw error;
+  return (data ?? null) as PublicVacancy | null;
+}
