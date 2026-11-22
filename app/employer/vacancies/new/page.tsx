@@ -1,70 +1,182 @@
 "use client";
-import { useState } from "react";
-import { useI18n } from "@/lib/i18n";
-import { useLocal } from "@/lib/store";
-import { JOBS_KEY, fmtLabel, type Job } from "@/lib/jobs";
-import { bad, FieldErr } from "@/lib/ui";
-import { burst, toast } from "@/lib/fx";
+import { useCallback, useEffect, useState } from "react";
+import { supabase } from "@/lib/supabase/client";
 
-const init = { title: "", city: "", format: "hybrid", salary: "", level: "Junior", tags: "", desc: "", reqs: "" };
+type Vacancy = {
+  id: string;
+  title: string;
+  company: string;
+  city: string;
+  salary: string;
+  level: string;
+  status: "ACTIVE" | "PAUSED";
+  created_at: string;
+  expires_at: string | null;
+};
 
-export default function NewVacancyPage() {
-  const { t } = useI18n();
-  const [mine, save] = useLocal<Job[]>(JOBS_KEY, []);
-  const [company] = useLocal("4everr:company", { name: "Kaspi Lab" });
-  const [f, setF] = useState(init);
-  const [e, setE] = useState<Record<string, string>>({});
-  const set = (k: string) => (ev: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => setF({ ...f, [k]: ev.target.value });
-  const req = "Міндетті өріс|Обязательное поле|Required field";
+const LEVELS = ["Тағылымдама", "Junior", "Middle", "Senior"];
+const FORMATS = [
+  { v: "office", l: "Офис" },
+  { v: "hybrid", l: "Гибрид" },
+  { v: "remote", l: "Қашықтан" },
+];
+const empty = {
+  title: "",
+  company: "",
+  city: "",
+  format: "office",
+  salary: "",
+  level: "Junior",
+  tags: "",
+  description: "",
+  expires_at: "",
+};
 
-  function submit(ev: React.MouseEvent<HTMLButtonElement>) {
-    const er: Record<string, string> = {};
-    (["title", "city", "salary", "tags", "desc", "reqs"] as const).forEach((k) => { if (!f[k].trim()) er[k] = req; });
-    setE(er);
-    if (Object.keys(er).length) return;
-    const j: Job = {
-      id: "u" + Date.now(), title: f.title.trim(), company: company.name, city: f.city.trim(), format: f.format as Job["format"],
-      salary: f.salary.trim(), level: f.level, tags: f.tags.split(",").map((x) => x.trim()).filter(Boolean),
-      desc: f.desc.trim(), reqs: f.reqs.split("\n").map((x) => x.trim()).filter(Boolean),
-    };
-    save([j, ...mine]);
-    setF(init);
-    burst(ev.currentTarget);
-    toast(t("Вакансия жарияланды|Вакансия опубликована|Job published"), t("Кандидаттар оны Вакансиялар бөлімінде көреді|Кандидаты увидят её в разделе Вакансии|Candidates will see it in Jobs"));
+export default function EmployerVacancies() {
+  const [form, setForm] = useState(empty);
+  const [rows, setRows] = useState<Vacancy[]>([]);
+  const [busy, setBusy] = useState(false);
+  const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
+
+  const load = useCallback(async () => {
+    const { data: u } = await supabase().auth.getUser();
+    if (!u.user) return;
+    const { data, error } = await supabase()
+      .from("vacancies")
+      .select("id, title, company, city, salary, level, status, created_at, expires_at")
+      .eq("employer_id", u.user.id)
+      .order("created_at", { ascending: false });
+    if (error) setMsg({ ok: false, text: error.message });
+    else setRows((data ?? []) as Vacancy[]);
+  }, []);
+
+  useEffect(() => {
+    load();
+    (async () => {
+      const { data: u } = await supabase().auth.getUser();
+      if (!u.user) return;
+      const { data } = await supabase()
+        .from("profiles")
+        .select("company_name")
+        .eq("id", u.user.id)
+        .single();
+      if (data?.company_name) setForm((f) => ({ ...f, company: f.company || data.company_name }));
+    })();
+  }, [load]);
+
+  async function submit(e: React.FormEvent) {
+    e.preventDefault();
+    setMsg(null);
+    if (!form.title.trim()) {
+      setMsg({ ok: false, text: "Вакансия атауын жазыңыз" });
+      return;
+    }
+    setBusy(true);
+    const { data: u } = await supabase().auth.getUser();
+    if (!u.user) {
+      setBusy(false);
+      setMsg({ ok: false, text: "Алдымен жүйеге кіріңіз" });
+      return;
+    }
+    const { error } = await supabase().from("vacancies").insert({
+      employer_id: u.user.id,
+      title: form.title.trim(),
+      company: form.company.trim(),
+      city: form.city.trim(),
+      format: form.format,
+      salary: form.salary.trim(),
+      level: form.level,
+      tags: form.tags.split(",").map((s) => s.trim()).filter(Boolean),
+      description: form.description.trim(),
+      expires_at: form.expires_at ? new Date(form.expires_at).toISOString() : null,
+    });
+    setBusy(false);
+    if (error) {
+      setMsg({ ok: false, text: error.message });
+      return;
+    }
+    setForm({ ...empty, company: form.company });
+    setMsg({ ok: true, text: "Вакансия жарияланды" });
+    load();
   }
-  const fld = (k: keyof typeof init, label: string, ph?: string) => (
-    <div><label htmlFor={k} className="font-semibold text-sm">{t(label)} *</label><input id={k} className="inp mt-1" style={bad(e[k])} value={f[k]} onChange={set(k)} placeholder={ph} /><FieldErr e={e[k]} /></div>
-  );
+
+  async function toggle(v: Vacancy) {
+    const { error } = await supabase()
+      .from("vacancies")
+      .update({ status: v.status === "ACTIVE" ? "PAUSED" : "ACTIVE" })
+      .eq("id", v.id);
+    if (error) setMsg({ ok: false, text: error.message });
+    load();
+  }
+
+  async function remove(v: Vacancy) {
+    if (!confirm(`"${v.title}" вакансиясын өшіресіз бе?`)) return;
+    const { error } = await supabase().from("vacancies").delete().eq("id", v.id);
+    if (error) setMsg({ ok: false, text: error.message });
+    load();
+  }
+
+  const input = "w-full rounded-xl border border-line bg-bg px-4 py-2 text-ink outline-none focus:border-brand";
 
   return (
-    <div className="grid lg:grid-cols-[1fr_1fr] gap-6 items-start">
-      <div className="card p-5 grid gap-4">
-        <h1 className="font-bold text-2xl">{t("Вакансия жариялау|Публикация вакансии|Post a job")}</h1>
-        {fld("title", "Атауы|Название|Title")}
-        <div className="grid sm:grid-cols-2 gap-4">
-          {fld("city", "Қала|Город|City")}
-          <div><label htmlFor="format" className="font-semibold text-sm">{t("Формат|Формат|Format")}</label>
-            <select id="format" className="inp mt-1" value={f.format} onChange={set("format")}>{(Object.keys(fmtLabel) as (keyof typeof fmtLabel)[]).map((k) => <option key={k} value={k}>{t(fmtLabel[k])}</option>)}</select></div>
+    <div className="grid gap-8 xl:grid-cols-[420px_1fr]">
+      <form onSubmit={submit} className="grid h-fit gap-4 rounded-2xl border border-line bg-sf p-6">
+        <h1 className="text-xl font-bold text-ink">Жаңа вакансия</h1>
+
+        <input className={input} placeholder="Атауы (мысалы: Junior Frontend әзірлеуші)" value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} />
+        <input className={input} placeholder="Компания" value={form.company} onChange={(e) => setForm({ ...form, company: e.target.value })} />
+        <div className="grid grid-cols-2 gap-3">
+          <input className={input} placeholder="Қала" value={form.city} onChange={(e) => setForm({ ...form, city: e.target.value })} />
+          <select className={input} value={form.format} onChange={(e) => setForm({ ...form, format: e.target.value })}>
+            {FORMATS.map((f) => <option key={f.v} value={f.v}>{f.l}</option>)}
+          </select>
         </div>
-        <div className="grid sm:grid-cols-2 gap-4">
-          {fld("salary", "Жалақы|Зарплата|Salary", "300 000 – 400 000 ₸")}
-          <div><label htmlFor="level" className="font-semibold text-sm">{t("Деңгей|Уровень|Level")}</label>
-            <select id="level" className="inp mt-1" value={f.level} onChange={set("level")}><option>Intern</option><option>Junior</option><option>Middle</option></select></div>
+        <div className="grid grid-cols-2 gap-3">
+          <input className={input} placeholder="Жалақы (мысалы: 300 000 – 400 000 ₸)" value={form.salary} onChange={(e) => setForm({ ...form, salary: e.target.value })} />
+          <select className={input} value={form.level} onChange={(e) => setForm({ ...form, level: e.target.value })}>
+            {LEVELS.map((l) => <option key={l} value={l}>{l}</option>)}
+          </select>
         </div>
-        {fld("tags", "Технологиялар (үтірмен)|Технологии (через запятую)|Technologies (comma separated)", "HTML, CSS, React")}
-        <div><label htmlFor="desc" className="font-semibold text-sm">{t("Сипаттама|Описание|Description")} *</label><textarea id="desc" rows={3} className="inp mt-1" style={bad(e.desc)} value={f.desc} onChange={set("desc")} /><FieldErr e={e.desc} /></div>
-        <div><label htmlFor="reqs" className="font-semibold text-sm">{t("Талаптар (әр жолға біреуден)|Требования (по одному в строке)|Requirements (one per line)")} *</label><textarea id="reqs" rows={3} className="inp mt-1" style={bad(e.reqs)} value={f.reqs} onChange={set("reqs")} /><FieldErr e={e.reqs} /></div>
-        <button className="btn btn-p w-fit" onClick={submit}>{t("Жариялау|Опубликовать|Publish")}</button>
-      </div>
+        <input className={input} placeholder="Дағдылар, үтірмен: HTML, CSS, React" value={form.tags} onChange={(e) => setForm({ ...form, tags: e.target.value })} />
+        <textarea className={input} rows={5} placeholder="Сипаттамасы, міндеттері, талаптары" value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} />
+        <label className="grid gap-1 text-sm text-mute">
+          Жарамдылық мерзімі (міндетті емес)
+          <input type="date" className={input} value={form.expires_at} onChange={(e) => setForm({ ...form, expires_at: e.target.value })} />
+        </label>
+
+        {msg && (
+          <p className={`rounded-xl px-4 py-3 text-sm ${msg.ok ? "bg-soft text-brand" : "bg-red-500/10 text-red-500"}`}>{msg.text}</p>
+        )}
+
+        <button type="submit" disabled={busy} className="rounded-xl bg-brand py-3 font-semibold text-white disabled:opacity-50">
+          {busy ? "Жариялануда..." : "Вакансияны жариялау"}
+        </button>
+      </form>
+
       <div className="grid gap-3">
-        <h2 className="font-bold text-lg">{t("Менің вакансияларым|Мои вакансии|My jobs")}</h2>
-        {mine.length === 0 && <p className="text-mute text-sm">{t("Әзірге жоқ.|Пока нет.|None yet.")}</p>}
-        {mine.map((j) => (
-          <div key={j.id} className="card p-4 flex items-start justify-between gap-3">
-            <div><p className="font-semibold">{j.title}</p><p className="text-sm text-mute">{j.city} · {t(fmtLabel[j.format])} · {j.salary}</p></div>
-            <button className="text-mute" aria-label="Delete" onClick={() => save(mine.filter((x) => x.id !== j.id))}>×</button>
+        <h2 className="text-xl font-bold text-ink">Менің вакансияларым ({rows.length})</h2>
+        {rows.map((v) => (
+          <div key={v.id} className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-line bg-sf p-5">
+            <div className="min-w-0">
+              <p className="font-semibold text-ink">{v.title}</p>
+              <p className="text-sm text-mute">{v.company} · {v.city} · {v.level}</p>
+              <p className="mt-1 text-sm font-semibold text-brand">{v.salary}</p>
+              <p className={`mt-1 text-xs ${v.status === "ACTIVE" ? "text-brand" : "text-amber-500"}`}>
+                {v.status === "ACTIVE" ? "Белсенді" : "Тоқтатылған"}
+                {v.expires_at && ` · мерзімі: ${new Date(v.expires_at).toLocaleDateString("kk-KZ")}`}
+              </p>
+            </div>
+            <div className="flex gap-2">
+              <button onClick={() => toggle(v)} className="rounded-lg border border-line px-3 py-1 text-sm text-ink hover:bg-soft">
+                {v.status === "ACTIVE" ? "Тоқтату" : "Қосу"}
+              </button>
+              <button onClick={() => remove(v)} className="rounded-lg bg-red-500/10 px-3 py-1 text-sm text-red-500">
+                Өшіру
+              </button>
+            </div>
           </div>
         ))}
+        {rows.length === 0 && <p className="py-8 text-center text-mute">Вакансия әлі жарияланбаған.</p>}
       </div>
     </div>
   );
