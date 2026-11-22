@@ -13,6 +13,7 @@ type MenuItem = { href: string; label: string };
 const common: MenuItem[] = [
   { href: "/test", label: "Тест|Тест|Test" },
   { href: "/survey", label: "Сауалнама|Опрос|Survey" },
+  { href: "/feedback", label: "Пікір|Отзыв|Feedback" },
 ];
 
 const menus: Record<Role, MenuItem[]> = {
@@ -31,8 +32,10 @@ const menus: Record<Role, MenuItem[]> = {
     ...common,
   ],
   ADMIN: [
+    { href: "/admin", label: "Админ панель|Админ-панель|Admin panel" },
     { href: "/admin/users", label: "Пайдаланушылар|Пользователи|Users" },
-    { href: "/admin/logs", label: "Журнал|Журнал|Logs" },
+    { href: "/admin/vacancies", label: "Вакансиялар|Вакансии|Vacancies" },
+    { href: "/admin/applications", label: "Өтінімдер|Заявки|Applications" },
     ...common,
   ],
 };
@@ -40,17 +43,22 @@ const menus: Record<Role, MenuItem[]> = {
 const homes: Record<Role, string> = {
   CANDIDATE: "/profile",
   EMPLOYER: "/employer/applications",
-  ADMIN: "/admin/users",
+  ADMIN: "/admin",
 };
+
+// Visitors who are not signed in can still find the place to leave feedback.
+const guestLinks: MenuItem[] = [
+  { href: "/feedback", label: "Пікір қалдыру|Оставить отзыв|Leave feedback" },
+];
 
 export default function Header() {
   const path = usePathname();
   const { user } = useAuth();
   const { t } = useI18n();
 
-  const links: MenuItem[] = user ? menus[user.role] ?? [] : [];
+  const links: MenuItem[] = user ? menus[user.role] ?? [] : guestLinks;
   const home = user ? homes[user.role] ?? "/profile" : "/start";
-  const active = (h: string) => path === h || path.startsWith(h + "/");
+  const active = (h: string) => path === h || (h !== "/admin" && path.startsWith(h + "/"));
 
   return (
     <header
