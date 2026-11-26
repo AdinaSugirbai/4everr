@@ -69,5 +69,10 @@ export async function setUserPassword(userId: string, password: string) {
   if (!res.ok) {
     const data = (await res.json().catch(() => ({}))) as { error?: string };
     throw new Error(data.error ?? "failed");
+    
+export async function updateUser(id: string, name: string, phone: string, city: string) {
+  const { error } = await supabase().rpc("admin_update_user", { target: id, p_name: name, p_phone: phone, p_city: city });
+  if (error) throw error;
+}
   }
 }
