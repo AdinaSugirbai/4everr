@@ -1,21 +1,36 @@
 "use client";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useAuth } from "@/lib/auth";
 import { useI18n } from "@/lib/i18n";
 import { useLocal } from "@/lib/store";
 import { emptyResume, resumeKey, validateResume, type Resume } from "@/lib/resume";
 import { bad, FieldErr, initials } from "@/lib/ui";
 import { toast } from "@/lib/fx";
+import { archiveResume, createResume, fetchResumes, setPrimaryResume, updateResume, type ResumeRow } from "@/lib/userdata";
 
 export default function ResumePage() {
   const { user } = useAuth();
   const { t } = useI18n();
   const [saved, save] = useLocal<Resume>(resumeKey(user?.email ?? ""), emptyResume);
+  const [rows, setRows] = useState<ResumeRow[]>([]);
+  const [selectedId, setSelectedId] = useState("");
+  const [title, setTitle] = useState("");
+  const [busy, setBusy] = useState(false);
   const [draft, setDraft] = useState<Resume | null>(null);
   const [sn, setSn] = useState("");
   const [tried, setTried] = useState(false);
-  const r = draft ?? saved;
+  const selected = rows.find((x) => x.id === selectedId);
+  const r = draft ?? selected?.content ?? saved;
   const e = tried ? validateResume(r) : {};
+
+  useEffect(() => {
+    if (!user) return;
+    fetchResumes().then((items) => {
+      setRows(items);
+      const first = items.find((x) => x.is_primary) ?? items[0];
+      if (first) { setSelectedId(first.id); setTitle(first.title); }
+    }).catch((error) => toast("Резюмелер жүктелмеді", (error as Error).message));
+  }, [user]);
 
   const set = (k: keyof Resume) => (ev: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => setDraft({ ...r, [k]: ev.target.value });
   const setLevel = (i: number, v: number) => setDraft({ ...r, skills: r.skills.map((s, j) => (j === i ? { ...s, level: v } : s)) });
@@ -41,11 +56,36 @@ export default function ResumePage() {
     fr.readAsDataURL(f);
   }
 
-  function submit() {
+  async function submit() {
     setTried(true);
     if (Object.keys(validateResume(r)).length) { toast(t("Барлық өрісті толтырыңыз|Заполните все поля|Fill in all fields"), t("Қызыл өрістерді тексеріңіз|Проверьте красные поля|Check the red fields")); return; }
-    save(r); setDraft(null); setTried(false);
-    toast(t("Резюме сақталды|Резюме сохранено|Resume saved"), t("Жұмыс берушілер жаңа нұсқаны көреді|Работодатели увидят новую версию|Employers will see the new version"));
+    if (!user) return;
+    if (title.trim().length < 2) { toast(t("Резюме атауын кемінде 2 таңбамен жазыңыз|Укажите название резюме длиной от 2 символов|Enter a resume title with at least 2 characters"), ""); return; }
+    setBusy(true);
+    try {
+      if (selectedId) await updateResume(selectedId, title, r);
+      else {
+        const created = await createResume(title, r);
+        setSelectedId(created.id);
+      }
+      const items = await fetchResumes(); setRows(items); save(r); setDraft(null); setTried(false);
+      toast(t("Резюме сақталды|Резюме сохранено|Resume saved"), t("Жұмыс берушілер жаңа нұсқаны көреді|Работодатели увидят новую версию|Employers will see the new version"));
+    } catch (error) { toast(t("Сақтау қатесі|Ошибка сохранения|Save failed"), (error as Error).message); }
+    finally { setBusy(false); }
+  }
+
+  async function choosePrimary() {
+    if (!selectedId) return;
+    try { await setPrimaryResume(selectedId); const items = await fetchResumes(); setRows(items); }
+    catch (error) { toast(t("Өзгерту қатесі|Ошибка обновления|Update failed"), (error as Error).message); }
+  }
+
+  async function archiveSelected() {
+    if (!selectedId || !window.confirm(t("Резюмені мұрағатқа жібересіз бе? Бұрынғы өтінімдер сақталады.|Переместить резюме в архив? Старые отклики сохранятся.|Archive this resume? Existing applications will be retained."))) return;
+    try {
+      await archiveResume(selectedId); const items = await fetchResumes(); setRows(items);
+      const next = items.find((x) => x.is_primary) ?? items[0]; setSelectedId(next?.id ?? ""); setTitle(next?.title ?? ""); setDraft(next ? null : emptyResume);
+    } catch (error) { toast(t("Мұрағаттау қатесі|Ошибка архивации|Archive failed"), (error as Error).message); }
   }
 
   const L = (k: keyof Resume, label: string) => (<label htmlFor={k} className="font-semibold text-sm">{t(label)} *</label>);
@@ -54,6 +94,15 @@ export default function ResumePage() {
     <div className="grid lg:grid-cols-[1fr_340px] gap-6 items-start">
       <div className="card p-5 grid gap-4">
         <h1 className="font-bold text-2xl">{t("Резюмені өңдеу|Редактирование резюме|Edit resume")}</h1>
+        <div className="grid gap-2 sm:grid-cols-[1fr_auto_auto]">
+          <select className="inp" value={selectedId} onChange={(event) => { const item = rows.find((x) => x.id === event.target.value); setSelectedId(event.target.value); setTitle(item?.title ?? ""); setDraft(null); setTried(false); }}>
+            <option value="">{t("Жаңа резюме|Новое резюме|New resume")}</option>
+            {rows.map((item) => <option key={item.id} value={item.id}>{item.title}{item.is_primary ? " · негізгі" : ""}</option>)}
+          </select>
+          <button type="button" className="btn btn-s" disabled={!selectedId} onClick={choosePrimary}>{t("Негізгі ету|Сделать основным|Set as primary")}</button>
+          <button type="button" className="btn btn-s" disabled={!selectedId} onClick={archiveSelected}>{t("Мұрағаттау|Архивировать|Archive")}</button>
+        </div>
+        <label className="grid gap-1 text-sm font-semibold">{t("Резюме атауы|Название резюме|Resume title")}<input className="inp" value={title} onChange={(event) => setTitle(event.target.value)} placeholder={t("Мысалы: Frontend әзірлеуші|Например: Frontend разработчик|For example: Frontend developer")} /></label>
         <p className="text-sm text-mute">{t("Барлық өріс міндетті (). Толық резюмесіз өтініш қалдыра алмайсыз.|Все поля обязательны (). Без полного резюме откликнуться нельзя.|All fields are required (*). You cannot apply without a complete resume.")}</p>
 
         <div>
@@ -94,7 +143,7 @@ export default function ResumePage() {
           </div>
           <FieldErr e={e.skills} />
         </div>
-        <button className="btn btn-p w-fit" onClick={submit}>{t("Резюмені сақтау|Сохранить резюме|Save resume")}</button>
+        <button className="btn btn-p w-fit" disabled={busy} onClick={submit}>{busy ? t("Сақталуда...|Сохранение...|Saving...") : t("Резюмені сақтау|Сохранить резюме|Save resume")}</button>
       </div>
 
       <aside className="card p-5 lg:sticky lg:top-20 grid gap-3">

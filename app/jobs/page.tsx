@@ -3,10 +3,8 @@ import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useAuth } from "@/lib/auth";
 import { useI18n } from "@/lib/i18n";
-import { useLocal } from "@/lib/store";
 import Modal from "@/components/Modal";
-import { seedJobs } from "@/lib/jobs";
-import { emptyResume, resumeKey, validateResume, type Resume } from "@/lib/resume";
+import { validateResume } from "@/lib/resume";
 import { bad, FieldErr } from "@/lib/ui";
 import { burst, toast } from "@/lib/fx";
 import {
@@ -14,28 +12,17 @@ import {
   fetchActiveVacancies,
   fetchApplications,
   fetchFavorites,
+  fetchResumes,
   setFavorite,
   type AppRow,
   type AppStatus,
   type PublicVacancy,
+  type ResumeRow,
 } from "@/lib/userdata";
+import ResumePicker from "@/components/ResumePicker";
+import { FiHeart } from "react-icons/fi";
 
 type JobView = PublicVacancy & { reqs?: string[] };
-
-const DEMO: JobView[] = seedJobs.map((j) => ({
-  id: j.id,
-  title: j.title,
-  company: j.company,
-  city: j.city,
-  format: j.format,
-  salary: j.salary,
-  level: j.level,
-  tags: j.tags,
-  description: j.desc,
-  reqs: j.reqs,
-  status: "ACTIVE",
-  created_at: "1970-01-01T00:00:00Z",
-}));
 
 const FORMAT: Record<string, string> = {
   office: "Офис|Офис|Office",
@@ -62,13 +49,14 @@ const STATUS_CLS: Record<AppStatus, string> = {
 export default function JobsPage() {
   const { user } = useAuth();
   const { t } = useI18n();
-  const [resume] = useLocal<Resume>(resumeKey(user?.email ?? ""), emptyResume);
 
   const L = (s: string) => (s.includes("|") ? t(s) : s);
 
   const [vacancies, setVacancies] = useState<PublicVacancy[]>([]);
   const [favIds, setFavIds] = useState<string[]>([]);
   const [apps, setApps] = useState<AppRow[]>([]);
+  const [resumes, setResumes] = useState<ResumeRow[]>([]);
+  const [resumeId, setResumeId] = useState("");
   const [err, setErr] = useState<string | null>(null);
   const [q, setQ] = useState("");
   const [fmt, setFmt] = useState("all");
@@ -82,9 +70,11 @@ export default function JobsPage() {
     try {
       setVacancies(await fetchActiveVacancies());
       if (user) {
-        const [f, a] = await Promise.all([fetchFavorites(), fetchApplications()]);
+        const [f, a, r] = await Promise.all([fetchFavorites(), fetchApplications(), fetchResumes()]);
         setFavIds(f.map((x) => x.job_id));
         setApps(a);
+        setResumes(r);
+        setResumeId((current) => current && r.some((x) => x.id === current) ? current : (r.find((x) => x.is_primary) ?? r[0])?.id ?? "");
       }
     } catch (e) {
       setErr((e as Error).message);
@@ -95,7 +85,7 @@ export default function JobsPage() {
     load();
   }, [load]);
 
-  const all: JobView[] = [...vacancies, ...DEMO];
+  const all: JobView[] = vacancies;
 
   useEffect(() => {
     if (deepLinked.current) return;
@@ -113,7 +103,8 @@ export default function JobsPage() {
         .includes(q.trim().toLowerCase()),
   );
 
-  const complete = Object.keys(validateResume(resume)).length === 0;
+  const selectedResume = resumes.find((x) => x.id === resumeId);
+  const complete = Boolean(selectedResume && Object.keys(validateResume(selectedResume.content)).length === 0);
   const applied = job ? apps.find((a) => a.job_id === job.id) : undefined;
 
   function openJob(v: JobView) {
@@ -141,17 +132,7 @@ export default function JobsPage() {
     }
     setBusy(true);
     try {
-      await applyToJob({ id: job.id, title: L(job.title), company: job.company }, cover.trim(), {
-        name: user.name,
-        email: user.email,
-        position: resume.position,
-        city: resume.city,
-        phone: resume.phone,
-        about: resume.about,
-        education: resume.education,
-        skills: resume.skills,
-        photo: resume.photo,
-      });
+      await applyToJob({ id: job.id }, resumeId, cover.trim());
       setCover("");
       setCe("");
       burst(ev.currentTarget);
@@ -229,7 +210,7 @@ export default function JobsPage() {
                   onClick={() => toggleFav(v.id)}
                   className="w-fit rounded-xl border border-line px-3 py-2 text-sm font-semibold text-ink hover:bg-soft"
                 >
-                  <span aria-hidden="true">{saved ? "★" : "☆"}</span>{" "}
+                  <FiHeart aria-hidden="true" className="mr-1 inline" fill={saved ? "currentColor" : "none"} />
                   {saved
                     ? t("Таңдаулыдан алып тастау|Убрать из избранного|Remove from favorites")
                     : t("Таңдаулыға қосу|Добавить в избранное|Add to favorites")}
@@ -293,6 +274,7 @@ export default function JobsPage() {
               </div>
             ) : (
               <div className="grid gap-3">
+                <ResumePicker resumes={resumes} value={resumeId} onChange={setResumeId} />
                 <div>
                   <label htmlFor="cv" className="text-sm font-semibold">
                     {t("Қысқаша хат|Сопроводительное письмо|Cover letter")}

@@ -4,9 +4,7 @@ import { useParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import { useAuth } from "@/lib/auth";
 import { useI18n } from "@/lib/i18n";
-import { useLocal } from "@/lib/store";
-import { seedJobs } from "@/lib/jobs";
-import { emptyResume, resumeKey, validateResume, type Resume } from "@/lib/resume";
+import { validateResume } from "@/lib/resume";
 import { bad, FieldErr } from "@/lib/ui";
 import { burst, toast } from "@/lib/fx";
 import SaveJobButton from "@/components/SaveJobButton";
@@ -14,10 +12,13 @@ import {
   applyToJob,
   fetchApplications,
   fetchVacancy,
+  fetchResumes,
   type AppRow,
   type AppStatus,
   type PublicVacancy,
+  type ResumeRow,
 } from "@/lib/userdata";
+import ResumePicker from "@/components/ResumePicker";
 
 type View = {
   id: string;
@@ -76,7 +77,6 @@ export default function JobDetailPage() {
   const id = params.id;
   const { user } = useAuth();
   const { t } = useI18n();
-  const [resume] = useLocal<Resume>(resumeKey(user?.email ?? ""), emptyResume);
 
   const L = (s: string) => (s.includes("|") ? t(s) : s);
 
@@ -84,6 +84,8 @@ export default function JobDetailPage() {
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
   const [apps, setApps] = useState<AppRow[]>([]);
+  const [resumes, setResumes] = useState<ResumeRow[]>([]);
+  const [resumeId, setResumeId] = useState("");
   const [cover, setCover] = useState("");
   const [ce, setCe] = useState("");
   const [busy, setBusy] = useState(false);
@@ -98,29 +100,16 @@ export default function JobDetailPage() {
           const v = await fetchVacancy(id);
           if (v) found = fromDb(v);
         }
-        if (!found) {
-          const d = seedJobs.find((j) => j.id === id);
-          if (d) {
-            found = {
-              id: d.id,
-              title: d.title,
-              company: d.company,
-              city: d.city,
-              format: d.format,
-              salary: d.salary,
-              level: d.level,
-              tags: d.tags,
-              description: d.desc,
-              reqs: d.reqs,
-            };
-          }
-        }
         if (!alive) return;
         if (!found) setNotFound(true);
         setJob(found);
         if (user) {
-          const a = await fetchApplications();
-          if (alive) setApps(a);
+          const [a, r] = await Promise.all([fetchApplications(), fetchResumes()]);
+          if (alive) {
+            setApps(a);
+            setResumes(r);
+            setResumeId((current) => current && r.some((x) => x.id === current) ? current : (r.find((x) => x.is_primary) ?? r[0])?.id ?? "");
+          }
         }
       } catch (e) {
         if (alive) setErr((e as Error).message);
@@ -133,7 +122,8 @@ export default function JobDetailPage() {
     };
   }, [id, user]);
 
-  const complete = Object.keys(validateResume(resume)).length === 0;
+  const selectedResume = resumes.find((x) => x.id === resumeId);
+  const complete = Boolean(selectedResume && Object.keys(validateResume(selectedResume.content)).length === 0);
   const applied = apps.find((a) => a.job_id === id);
 
   async function apply(ev: React.MouseEvent<HTMLButtonElement>) {
@@ -145,17 +135,7 @@ export default function JobDetailPage() {
     setBusy(true);
     setErr(null);
     try {
-      await applyToJob({ id: job.id, title: L(job.title), company: job.company }, cover.trim(), {
-        name: user.name,
-        email: user.email,
-        position: resume.position,
-        city: resume.city,
-        phone: resume.phone,
-        about: resume.about,
-        education: resume.education,
-        skills: resume.skills,
-        photo: resume.photo,
-      });
+      await applyToJob({ id: job.id }, resumeId, cover.trim());
       setCover("");
       setCe("");
       burst(ev.currentTarget);
@@ -259,6 +239,7 @@ export default function JobDetailPage() {
           </div>
         ) : (
           <div className="grid gap-3">
+            <ResumePicker resumes={resumes} value={resumeId} onChange={setResumeId} />
             <label htmlFor="cv" className="text-sm font-semibold">
               {t("Қысқаша хат|Сопроводительное письмо|Cover letter")}
             </label>
@@ -279,4 +260,4 @@ export default function JobDetailPage() {
       </aside>
     </div>
   );
-} 
+}
