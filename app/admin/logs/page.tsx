@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase/client";
 import { useI18n } from "@/lib/i18n";
 
-type Log = { id: number; action: string; target_id: string | null; details: string | null; created_at: string };
+type Log = { id: string; action: string; target_id: string | null; details: string | null; created_at: string };
 const ACTION_LABELS: Record<string, string> = {
   UPDATE_PROFILE: "Профиль өзгертілді|Профиль изменён|Profile updated",
   UPDATE_VACANCY: "Вакансия өзгертілді|Вакансия изменена|Vacancy updated",
@@ -11,6 +11,8 @@ const ACTION_LABELS: Record<string, string> = {
   SET_ROLE: "Рөл өзгертілді|Роль изменена|Role changed",
   SET_BANNED: "Пайдаланушы күйі өзгертілді|Статус пользователя изменён|User status changed",
   DELETE_USER: "Пайдаланушы өшірілді|Пользователь удалён|User deleted",
+  ARCHIVE_USER: "Аккаунт мұрағатталды|Аккаунт архивирован|Account archived",
+  RESTORE_USER: "Аккаунт қалпына келтірілді|Аккаунт восстановлен|Account restored",
   DELETE_VACANCY: "Вакансия өшірілді|Вакансия удалена|Vacancy deleted",
   SET_VACANCY_STATUS: "Вакансия күйі өзгертілді|Статус вакансии изменён|Vacancy status changed",
   SET_APPLICATION_STATUS: "Өтінім күйі өзгертілді|Статус заявки изменён|Application status changed",
