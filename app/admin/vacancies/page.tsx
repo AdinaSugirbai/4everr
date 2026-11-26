@@ -3,6 +3,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { supabase } from "@/lib/supabase/client";
 import { setVacancyStatus, deleteVacancy, updateVacancy } from "@/lib/admin";
 import { useI18n } from "@/lib/i18n";
+import { FiEye } from "react-icons/fi";
 
 type V = {
   id: string;
@@ -114,7 +115,7 @@ export default function AdminVacancies() {
                 <td className="px-4 py-3">
                   <div className="flex min-w-48 flex-col gap-2">
                     <span className={r.moderation === "APPROVED" ? "text-brand" : r.moderation === "PENDING" ? "text-amber-500" : "text-red-500"}>
-                      {r.moderation === "APPROVED" ? t("Рұқсат етілген|Одобрена|Approved") : r.moderation === "PENDING" ? t("Тексеруде|На проверке|Pending") : t("Қабылданбады|Отклонена|Rejected")} · 👁 {r.views}
+                      {r.moderation === "APPROVED" ? t("Рұқсат етілген|Одобрена|Approved") : r.moderation === "PENDING" ? t("Тексеруде|На проверке|Pending") : t("Қабылданбады|Отклонена|Rejected")} · <FiEye className="inline" aria-hidden="true" /> {r.views}
                     </span>
                     <input type="date" aria-label={t("Жарамдылық мерзімі|Срок действия|Valid until")} defaultValue={r.expires_at?.slice(0, 10) ?? ""} onChange={(e) => (expiry.current[r.id] = e.target.value)} className="rounded-lg border border-line bg-bg px-2 py-1 text-ink" />
                     <div className="flex gap-2">

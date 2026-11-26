@@ -89,7 +89,7 @@ export default function ProfilePage() {
                 href={sectionHref(s.slug)}
                 className="flex items-start gap-3 rounded-2xl border border-line bg-sf p-5 transition-colors hover:bg-soft"
               >
-                <span className="text-2xl" aria-hidden>{s.icon}</span>
+                <s.icon className="text-2xl" aria-hidden="true" />
                 <span className="grow">
                   <span className="block font-semibold text-ink">{t(s.title)}</span>
                   <span className="mt-0.5 block text-sm text-mute">{t(s.desc)}</span>

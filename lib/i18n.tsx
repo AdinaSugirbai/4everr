@@ -30,9 +30,9 @@ export function I18nProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     let active = true;
-    const load = () => supabase()
+    const load = () => Promise.resolve(supabase()
       .from("site_translations")
-      .select("source, kk, ru, en")
+      .select("source, kk, ru, en"))
       .then(({ data, error }) => {
         if (!active || error || !data) return;
         const next: Record<string, Translation> = {};

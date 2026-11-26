@@ -1,6 +1,7 @@
 "use client";
 import { useState } from "react";
 import { useI18n } from "@/lib/i18n";
+import { FiAlertCircle, FiZap } from "react-icons/fi";
 
 export type Daily = { last: string; streak: number; picked: number | null; xp?: number };
 type Puzzle = { lang: string; code: string[]; bug: number; why: string };
@@ -59,8 +60,8 @@ export default function BugHunt({ daily, onChange }: { daily: Daily; onChange: (
   return (
     <div className="card p-5 grid gap-3">
       <div className="flex items-center justify-between gap-2">
-        <h3 className="font-bold">🐞 {t("Баг аулау|Охота на баги|Bug Hunt")}</h3>
-        <span className="chip c-w">🔥 {alive ? daily.streak : 0} {t("күн|дн.|d")}</span>
+        <h3 className="inline-flex items-center gap-2 font-bold"><FiAlertCircle aria-hidden="true" />{t("Баг аулау|Охота на баги|Bug Hunt")}</h3>
+        <span className="chip c-w inline-flex items-center gap-1"><FiZap aria-hidden="true" />{alive ? daily.streak : 0} {t("күн|дн.|d")}</span>
       </div>
       <div>
         <div className="flex justify-between text-sm"><span className="font-semibold">{t(LEVELS[lv])}</span><span className="text-mute">{xp} XP</span></div>

@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import { useI18n } from "@/lib/i18n";
+import { FiZap } from "react-icons/fi";
 
 type Q = { q: string; o: string[]; a: number; why: string };
 const QS: Q[] = [
@@ -41,7 +42,7 @@ export default function DailyChallenge() {
     <div className="card p-5 grid gap-3">
       <div className="flex items-center justify-between gap-2">
         <h3 className="font-bold">{t("Күннің IT сұрағы|Вопрос дня по IT|IT question of the day")}</h3>
-        <span className="chip c-w">🔥 {streakAlive ? s.streak : 0} {t("күн|дн.|d")}</span>
+        <span className="chip c-w inline-flex items-center gap-1"><FiZap aria-hidden="true" />{streakAlive ? s.streak : 0} {t("күн|дн.|d")}</span>
       </div>
       <p className="font-medium">{t(q.q)}</p>
       <div className="grid gap-2">

@@ -22,29 +22,29 @@ export default function AccountPage() {
   const [dpw, setDpw] = useState("");
   const [de, setDe] = useState("");
 
-  function saveProfile() {
+  async function saveProfile() {
     const er: Record<string, string> = {};
     if (name.trim().length < 2) er.name = "Атыңызды жазыңыз|Введите имя|Enter your name";
     if (!/^\S+@\S+\.\S+$/.test(email.trim())) er.email = "Дұрыс email жазыңыз|Введите корректный email|Enter a valid email";
     if (Object.keys(er).length) { setPe(er); return; }
-    const m = update(name, email);
+    const m = await update(name, email);
     if (m) { setPe({ email: m }); return; }
     setPe({});
     toast(t("Профиль сақталды|Профиль сохранён|Profile saved"), "");
   }
-  function savePw() {
+  async function savePw() {
     setWTried(true);
     const er: Record<string, string> = {};
     if (!pw.old) er.old = "Ескі құпиясөзді жазыңыз|Введите старый пароль|Enter the old password";
     if (!pwOk(pw.nw)) er.nw = "Құпиясөз талапқа сай емес|Пароль не соответствует требованиям|Password does not meet the rules";
     if (Object.keys(er).length) { setWe(er); return; }
-    const m = changePassword(pw.old, pw.nw);
+    const m = await changePassword(pw.old, pw.nw);
     if (m) { setWe({ old: m }); return; }
     setWe({}); setWTried(false); setPw({ old: "", nw: "" });
     toast(t("Құпиясөз өзгертілді|Пароль изменён|Password changed"), "");
   }
-  function doDelete() {
-    const m = remove(dpw);
+  async function doDelete() {
+    const m = await remove(dpw);
     if (m) { setDe(m); return; }
     router.push("/start");
   }

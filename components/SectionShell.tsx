@@ -6,11 +6,12 @@ import { sectionHref, sections, type SectionSlug } from "@/lib/sections";
 export default function SectionShell({ slug, children }: { slug: SectionSlug; children: React.ReactNode }) {
   const { t } = useI18n();
   const cur = sections.find((s) => s.slug === slug)!;
+  const Icon = cur.icon;
   return (
     <>
       <Link href="/profile" className="btn btn-s w-fit">← {t("Артқа|Назад|Back")}</Link>
       <div className="mt-5 flex items-center gap-3">
-        <span className="text-3xl" aria-hidden>{cur.icon}</span>
+        <Icon className="text-3xl" aria-hidden="true" />
         <div>
           <h1 className="font-bold text-2xl">{t(cur.title)}</h1>
           <p className="text-sm text-mute">{t(cur.desc)}</p>

@@ -11,7 +11,7 @@ export default function SectionLinks() {
       <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
         {sections.map((s) => (
           <Link key={s.slug} href={sectionHref(s.slug)} className="card p-4 hover:bg-soft flex items-start gap-3">
-            <span className="text-2xl" aria-hidden>{s.icon}</span>
+            <s.icon className="text-2xl" aria-hidden="true" />
             <span className="grow">
               <span className="block font-semibold">{t(s.title)}</span>
               <span className="block text-sm text-mute">{t(s.desc)}</span>

@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
-import { Onest } from "next/font/google";
 import Header from "@/components/Header";
 import AuthGate from "@/components/AuthGate";
 import VisitTracker from "@/components/VisitTracker";
@@ -9,13 +8,12 @@ import { I18nProvider } from "@/lib/i18n";
 import { BRAND } from "@/lib/brand";
 import "./globals.css";
 
-const onest = Onest({ subsets: ["latin", "cyrillic", "cyrillic-ext"], variable: "--font-onest" });
 export const metadata: Metadata = { title: BRAND, description: "IT Career Navigator + TechTest" };
 export const viewport = { width: "device-width", initialScale: 1, viewportFit: "cover" };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="kk" className={onest.variable}>
+    <html lang="kk">
       <body>
         <I18nProvider>
           <AuthProvider>
@@ -24,7 +22,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
               <Header />
             </Suspense>
             <main className="max-w-6xl mx-auto px-4 py-6">
-              <AuthGate>{children}</AuthGate>
+              <Suspense fallback={<div className="h-24" />}>
+                <AuthGate>{children}</AuthGate>
+              </Suspense>
             </main>
           </AuthProvider>
         </I18nProvider>
