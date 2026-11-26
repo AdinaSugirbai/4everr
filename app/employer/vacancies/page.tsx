@@ -1,15 +1,15 @@
 "use client";
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
-import { FiEye, FiPlus, FiTrash2, FiUsers } from "react-icons/fi";
+import { FiEdit2, FiEye, FiPlus, FiTrash2, FiUsers } from "react-icons/fi";
 import { useAuth } from "@/lib/auth";
 import { useI18n } from "@/lib/i18n";
 import { deleteMyJob, fetchMyJobs, fetchReceivedApplications, type DbJob } from "@/lib/db";
 
-type Tab = "ACTIVE" | "PENDING" | "REJECTED" | "EXPIRED";
-const TABS: [Tab, string][] = [["ACTIVE", "Белсенді|Активные|Active"], ["PENDING", "Тексеруде|На проверке|Pending"], ["REJECTED", "Қабылданбады|Отклонены|Rejected"], ["EXPIRED", "Мерзімі өтті|Истекли|Expired"]];
+type Tab = "ACTIVE" | "PENDING" | "REJECTED" | "EXPIRED" | "PAUSED";
+const TABS: [Tab, string][] = [["ACTIVE", "Белсенді|Активные|Active"], ["PENDING", "Тексеруде|На проверке|Pending"], ["REJECTED", "Қабылданбады|Отклонены|Rejected"], ["EXPIRED", "Мерзімі өтті|Истекли|Expired"], ["PAUSED", "Мұрағат|Архив|Archived"]];
 const tabOf = (j: DbJob): Tab =>
-  j.moderation === "PENDING" ? "PENDING" : j.moderation === "REJECTED" ? "REJECTED"
+  j.status === "PAUSED" ? "PAUSED" : j.moderation === "PENDING" ? "PENDING" : j.moderation === "REJECTED" ? "REJECTED"
     : j.expiresAt && new Date(j.expiresAt) < new Date() ? "EXPIRED" : "ACTIVE";
 
 export default function EmployerVacancies() {
@@ -56,6 +56,7 @@ export default function EmployerVacancies() {
               <span className="text-xs text-mute"><FiEye className="mr-1 inline" />{j.views}{j.expiresAt ? ` · ${new Date(j.expiresAt).toLocaleDateString("ru-RU")}` : ""}</span></div>
             <div className="flex items-center gap-2">
               <Link href="/employer/applications" className="btn btn-s"><FiUsers className="mr-1 inline" />{c?.all ?? 0}{c?.fresh ? <span className="chip c-w ml-2">+{c.fresh}</span> : null}</Link>
+              <Link href={`/employer/vacancies/${j.id}/edit`} className="btn btn-s" aria-label={t("Өңдеу|Редактировать|Edit")}><FiEdit2 /></Link>
               <button className="btn btn-s" aria-label="Delete" onClick={() => remove(j.id)}><FiTrash2 /></button>
             </div>
           </div>

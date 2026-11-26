@@ -1,5 +1,7 @@
 # Supabase setup
 
-Before using the admin content editor and the new admin edit/delete actions, apply the migration in `migrations/20261121000001_admin_content_and_editing.sql` to the Supabase project connected to this app.
+Apply the SQL migrations in `migrations/` to the Supabase project connected to this app, in filename order. Keep a database backup before applying schema changes to a database that already contains user records.
 
-Paste the migration into the Supabase SQL Editor. If the Supabase CLI is configured for this project, you can also apply it with `supabase db push`. The migration adds a public read-only translation table, restricts edits to authenticated admins, and adds admin-only RPCs for profile names, vacancies, and application deletion.
+Paste each migration into the Supabase SQL Editor in filename order. If the Supabase CLI is configured for this project, use `supabase db push` after reviewing the migration list. The migrations add admin editing and audit features, employer identity review and vacancy moderation, and compatible multi-resume/application storage while preserving existing records. The new user archive flow is reversible; it does not hard-delete a profile.
+
+Employer identity verification requires an admin to enter an official verification source before approval. Each vacancy is separately moderated. Resume records are capped at five active resumes per candidate, can be archived, and can be selected individually when applying.

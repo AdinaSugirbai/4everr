@@ -12,7 +12,7 @@ const STEPS = ["Негізгі|Основное|Basics", "Талаптар|Тр�
 const EXP = [["NONE", "Тәжірибесіз|Без опыта|No experience"], ["1-3", "1–3 жыл|1–3 года|1–3 years"], ["3-6", "3–6 жыл|3–6 лет|3–6 years"], ["6+", "6 жылдан артық|Более 6 лет|6+ years"]];
 const EMP = [["FULL", "Толық күн|Полная занятость|Full-time"], ["PART", "Жартылай|Частичная|Part-time"], ["INTERN", "Тағылымдама|Стажировка|Internship"], ["PROJECT", "Жоба|Проект|Project"]];
 const FMT = [["office", "Офис|Офис|Office"], ["hybrid", "Гибрид|Гибрид|Hybrid"], ["remote", "Қашықтан|Удалённо|Remote"]];
-const init = { title: "", direction: "", level: "Junior", city: "", address: "", experience: "NONE", skills: [] as string[], reqs: "", desc: "", employment: "FULL", format: "hybrid", from: "", to: "", tax: "GROSS", questions: [] as string[] };
+const init = { title: "", direction: "", level: "Junior", city: "", address: "", experience: "NONE", skills: [] as string[], reqs: "", desc: "", employment: "FULL", format: "hybrid" as "office" | "remote" | "hybrid", from: "", to: "", tax: "GROSS", questions: [] as string[] };
 const digits = (s: string) => s.replace(/\D/g, "");
 const n = (s: string) => Number(s).toLocaleString("ru-RU");
 
@@ -43,14 +43,18 @@ export default function NewVacancyPage() {
 
   async function submit() {
     if (!user) return;
+    if (!co?.verified) {
+      setErr(t("Алдымен компания профилін толтырып, растауға жіберіңіз.|Сначала заполните профиль компании и отправьте его на проверку.|Complete your company profile and submit it for verification first."));
+      return;
+    }
     for (let s = 0; s < 3; s++) { const e = check(s); if (e) { setStep(s); setErr(t(e)); return; } }
     const from = f.from ? Number(f.from) : null, to = f.to ? Number(f.to) : null;
     const salary = from && to ? `${n(f.from)} – ${n(f.to)} ₸` : from ? `${n(f.from)} ₸+` : to ? `≤ ${n(f.to)} ₸` : "Келісім бойынша|По договорённости|Negotiable";
     setBusy(true); setErr("");
     try {
       await createJob(user.id, {
-        title: f.title.trim(), company: co?.name || user.name, city: f.city.trim(), format: f.format, salary, level: f.level,
-        direction: f.direction || null, tags: f.skills, description: f.desc.trim(), reqs: f.reqs.split("\n").map((x) => x.trim()).filter(Boolean),
+        title: f.title.trim(), city: f.city.trim(), format: f.format, salary, level: f.level,
+        direction: f.direction || null, tags: f.skills, description: f.desc.trim(), requirements: f.reqs.split("\n").map((x) => x.trim()).filter(Boolean),
         salaryFrom: from, salaryTo: to, salaryTax: f.tax, experience: f.experience, employment: f.employment,
         address: f.address.trim(), questions: f.questions.map((x) => x.trim()).filter(Boolean),
       });
@@ -60,7 +64,7 @@ export default function NewVacancyPage() {
   }
 
   const sel = (k: "experience" | "employment" | "format", list: string[][]) => (
-    <select className="inp mt-1" value={f[k]} onChange={(e) => set(k, e.target.value)}>{list.map(([v, l]) => <option key={v} value={v}>{t(l)}</option>)}</select>
+    <select className="inp mt-1" value={f[k]} onChange={(e) => set(k, e.target.value as (typeof f)[typeof k])}>{list.map(([v, l]) => <option key={v} value={v}>{t(l)}</option>)}</select>
   );
   const L = (s: string) => <label className="text-sm font-semibold">{t(s)}</label>;
 
@@ -119,7 +123,7 @@ export default function NewVacancyPage() {
         <div className="flex justify-between">
           <button type="button" className="btn btn-s" disabled={step === 0} onClick={() => { setErr(""); setStep(step - 1); }}><FiArrowLeft className="mr-1 inline" />{t("Артқа|Назад|Back")}</button>
           {step < 3 ? <button type="button" className="btn btn-p" onClick={next}>{t("Әрі қарай|Далее|Next")}<FiArrowRight className="ml-1 inline" /></button>
-            : <button type="button" className="btn btn-p" disabled={busy} onClick={submit}>{t("Тексеруге жіберу|Отправить на проверку|Submit for review")}</button>}
+            : <button type="button" className="btn btn-p" disabled={busy || !co?.verified} onClick={submit}>{t("Тексеруге жіберу|Отправить на проверку|Submit for review")}</button>}
         </div>
       </div>
     </div>
