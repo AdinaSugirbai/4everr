@@ -3,7 +3,7 @@
 
 import { createContext, useContext, useState, useEffect } from "react";
 import { lookup } from "@/lib/dict";
-import { supabase } from "@/lib/supabase/client";
+import { hasSupabaseConfig, supabase } from "@/lib/supabase/client";
 
 export type Lang = "kk" | "ru" | "en";
 const LANGS: Lang[] = ["kk", "ru", "en"];
@@ -29,6 +29,7 @@ export function I18nProvider({ children }: { children: React.ReactNode }) {
   const [overrides, setOverrides] = useState<Record<string, Translation>>({});
 
   useEffect(() => {
+    if (!hasSupabaseConfig) return;
     let active = true;
     const load = () => Promise.resolve(supabase()
       .from("site_translations")

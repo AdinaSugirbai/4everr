@@ -1,9 +1,10 @@
 "use client";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useI18n } from "@/lib/i18n";
 import { useLocal } from "@/lib/store";
 import Silhouette from "@/components/Silhouette";
-import { tests } from "@/lib/quizdata";
+import { tests as defaultTests, type Test } from "@/lib/quizdata";
+import { loadAssessmentCatalog } from "@/lib/assessments";
 import { burst } from "@/lib/fx";
 
 type Result = { topic: string; score: number; total: number; date: string };
@@ -14,8 +15,8 @@ function shuffle<T>(x: T[]): T[] {
   for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; }
   return a;
 }
-function deal(id: string): Card[] {
-  return tests[id].q.map((q) => {
+function deal(id: string, catalog: Record<string, Test>): Card[] {
+  return catalog[id].q.map((q) => {
     const order = shuffle(q.a.map((_, k) => k));
     return { q: q.q, a: order.map((k) => q.a[k]), ok: order.indexOf(0) };
   });
@@ -24,6 +25,8 @@ function deal(id: string): Card[] {
 export default function TestPage() {
   const { t } = useI18n();
   const [results, saveResults] = useLocal<Result[]>("4everr:results", []);
+  const [tests, setTests] = useState(defaultTests);
+  const [catalogError, setCatalogError] = useState("");
   const [topic, setTopic] = useState<string | null>(null);
   const [deck, setDeck] = useState<Card[]>([]);
   const [i, setI] = useState(0);
@@ -31,7 +34,14 @@ export default function TestPage() {
   const [score, setScore] = useState(0);
   const done = topic !== null && i >= deck.length;
 
-  function start(id: string) { setTopic(id); setDeck(deal(id)); setI(0); setSel(null); setScore(0); }
+  useEffect(() => {
+    let active = true;
+    loadAssessmentCatalog("test").then((catalog) => { if (active) setTests(catalog as Record<string, Test>); })
+      .catch((error) => { if (active) setCatalogError((error as Error).message); });
+    return () => { active = false; };
+  }, []);
+
+  function start(id: string) { if (!tests[id]) return; setTopic(id); setDeck(deal(id, tests)); setI(0); setSel(null); setScore(0); }
   function pick(n: number, e: React.MouseEvent<HTMLButtonElement>) {
     if (sel !== null) return;
     setSel(n);
@@ -45,6 +55,7 @@ export default function TestPage() {
   if (!topic) {
     return (
       <div className="max-w-3xl mx-auto grid gap-5">
+        {catalogError && <p role="status" className="rounded-xl bg-amber-500/10 p-3 text-sm text-amber-700">{t("Серверлік каталог ашылмады, кірістірілген тесттер көрсетілді.|Не удалось загрузить каталог, показаны встроенные тесты.|Could not load the server catalog; built-in tests are shown.")}</p>}
         <div><h1 className="font-bold text-2xl">{t("Тест тапсыру|Пройти тест|Take a test")}</h1><p className="text-sm text-mute mt-1">{t("Әр дұрыс жауап IT-маман силуэтінің бір бөлігін береді.|Каждый верный ответ добавляет часть силуэта IT-специалиста.|Each correct answer adds a part of the IT specialist silhouette.")}</p></div>
         <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
           {Object.keys(tests).map((id) => {

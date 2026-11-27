@@ -1,7 +1,7 @@
 "use client";
 import { createContext, useContext, useEffect, useState } from "react";
 import type { Session } from "@supabase/supabase-js";
-import { supabase } from "@/lib/supabase/client";
+import { hasSupabaseConfig, supabase } from "@/lib/supabase/client";
 
 export type Role = "CANDIDATE" | "EMPLOYER" | "ADMIN";
 export type User = { id: string; name: string; email: string; role: Role; banned: boolean };
@@ -55,24 +55,35 @@ async function loadProfile(id: string, email: string): Promise<User | null> {
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
-  const [ready, setReady] = useState(false);
+  const [ready, setReady] = useState(!hasSupabaseConfig);
 
   useEffect(() => {
+    let active = true;
+    if (!hasSupabaseConfig) return () => { active = false; };
     const client = supabase();
     const sync = async (session: Session | null) => {
       if (!session?.user) {
-        setUser(null);
+        if (active) setUser(null);
         return;
       }
-      const p = await loadProfile(session.user.id, session.user.email ?? "");
-      setUser(p && !p.banned ? p : null);
+      try {
+        const p = await loadProfile(session.user.id, session.user.email ?? "");
+        if (active) setUser(p && !p.banned ? p : null);
+      } catch {
+        if (active) setUser(null);
+      }
     };
-    client.auth.getSession().then(({ data }) => sync(data.session)).finally(() => setReady(true));
-    const { data: sub } = client.auth.onAuthStateChange((_e, session) => sync(session));
-    return () => sub.subscription.unsubscribe();
+    const timeout = window.setTimeout(() => { if (active) setReady(true); }, 7000);
+    const { data: sub } = client.auth.onAuthStateChange((_e, session) => { void sync(session); });
+    client.auth.getSession()
+      .then(({ data }) => sync(data.session))
+      .catch(() => { if (active) setUser(null); })
+      .finally(() => { window.clearTimeout(timeout); if (active) setReady(true); });
+    return () => { active = false; window.clearTimeout(timeout); sub.subscription.unsubscribe(); };
   }, []);
 
   const register: Ctx["register"] = async (name, email, pw, role) => {
+    if (!hasSupabaseConfig) return { error: "Supabase конфигурациясын .env.local файлына енгізіп, серверді қайта іске қосыңыз.", role: null };
     if (!pwOk(pw)) return { error: "Құпиясөз талапқа сай емес|Пароль не соответствует требованиям|Password does not meet the rules", role: null };
     const { error } = await supabase().auth.signUp({
       email,
@@ -87,6 +98,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const signin: Ctx["signin"] = async (email, pw) => {
+  if (!hasSupabaseConfig) return { error: "Supabase конфигурациясын .env.local файлына енгізіп, серверді қайта іске қосыңыз.", role: null };
   const { data, error } = await supabase().auth.signInWithPassword({ email, password: pw });
   if (error) return { error: error.message, role: null };
   if (!data.user) return { error: E_WRONG, role: null };

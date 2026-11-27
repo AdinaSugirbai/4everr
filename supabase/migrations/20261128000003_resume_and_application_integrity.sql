@@ -58,6 +58,9 @@ language plpgsql security definer set search_path = public as $$
 declare active_count integer;
 begin
   if auth.uid() is null then raise exception 'Authentication required'; end if;
+  if not exists(select 1 from public.profiles where id = auth.uid() and role::text = 'CANDIDATE' and not coalesce(banned, false) and archived_at is null) then
+    raise exception 'Only active candidates can manage resumes';
+  end if;
   if tg_op = 'INSERT' then
     new.candidate_id := auth.uid(); new.user_id := auth.uid();
     perform 1 from public.profiles where id = auth.uid() for update;
@@ -95,6 +98,9 @@ create or replace function public.set_primary_resume(target uuid) returns void
 language plpgsql security definer set search_path = public as $$
 begin
   if auth.uid() is null then raise exception 'Authentication required'; end if;
+  if not exists(select 1 from public.profiles where id = auth.uid() and role::text = 'CANDIDATE' and not coalesce(banned, false) and archived_at is null) then
+    raise exception 'Only active candidates can manage resumes';
+  end if;
   perform 1 from public.profiles where id = auth.uid() for update;
   if not exists(select 1 from public.resumes where id = target and candidate_id = auth.uid() and archived_at is null) then
     raise exception 'Active resume not found';
