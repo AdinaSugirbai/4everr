@@ -18,6 +18,7 @@ type Row = {
   created_at: string;
 };
 type View = "active" | "archived";
+type ArchiveSupport = "unknown" | "available" | "migration-required";
 
 const ROLE_LABELS: Record<Role, string> = {
   CANDIDATE: "Кандидат|Кандидат|Candidate",
@@ -44,6 +45,7 @@ export default function AdminUsers() {
   const [count, setCount] = useState(0);
   const [q, setQ] = useState("");
   const [view, setView] = useState<View>("active");
+  const [archiveSupport, setArchiveSupport] = useState<ArchiveSupport>("unknown");
   const [page, setPage] = useState(0);
   const [err, setErr] = useState<string | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
@@ -59,15 +61,31 @@ export default function AdminUsers() {
 
   const load = useCallback(async () => {
     setErr(null);
-    let request = supabase()
+    const client = supabase();
+    let request = client
       .from("profiles")
       .select("id, name, email, role, banned, archived_at, created_at", { count: "exact" })
       .order("created_at", { ascending: false })
       .range(page * PAGE_SIZE, page * PAGE_SIZE + PAGE_SIZE - 1);
     request = view === "archived" ? request.not("archived_at", "is", null) : request.is("archived_at", null);
-    const search = q.trim().replace(/[(),%_*]/g, " ").replace(/\s+/g, " ");
+    const search = q.trim().replace(/[^\p{L}\p{N}@._+\-\s]/gu, " ").replace(/\s+/g, " ");
     if (search) request = request.or(`name.ilike.%${search}%,email.ilike.%${search}%`);
-    const { data, error, count: total } = await request;
+    let { data, error, count: total } = await request;
+    if (error && view === "active" && (error.code === "42703" || error.code === "PGRST204")) {
+      let fallback = client
+        .from("profiles")
+        .select("id, name, email, role, banned, created_at", { count: "exact" })
+        .order("created_at", { ascending: false })
+        .range(page * PAGE_SIZE, page * PAGE_SIZE + PAGE_SIZE - 1);
+      if (search) fallback = fallback.or(`name.ilike.%${search}%,email.ilike.%${search}%`);
+      const result = await fallback;
+      data = result.data?.map((row) => ({ ...row, archived_at: null })) ?? null;
+      error = result.error;
+      total = result.count;
+      if (!result.error) setArchiveSupport("migration-required");
+    } else if (!error) {
+      setArchiveSupport("available");
+    }
     if (error) {
       setErr(error.message);
       return;
@@ -146,10 +164,12 @@ export default function AdminUsers() {
         <button type="button" role="tab" aria-selected={view === "active"} className={`btn ${view === "active" ? "btn-p" : "btn-s"}`} onClick={() => { setView("active"); setPage(0); }}>
           {t("Белсенді аккаунттар|Активные аккаунты|Active accounts")}
         </button>
-        <button type="button" role="tab" aria-selected={view === "archived"} className={`btn ${view === "archived" ? "btn-p" : "btn-s"}`} onClick={() => { setView("archived"); setPage(0); }}>
+        {archiveSupport !== "migration-required" && <button type="button" role="tab" aria-selected={view === "archived"} className={`btn ${view === "archived" ? "btn-p" : "btn-s"}`} onClick={() => { setView("archived"); setPage(0); }}>
           {t("Мұрағат|Архив|Archived")}
-        </button>
+        </button>}
       </div>
+
+      {archiveSupport === "migration-required" && <p className="rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-ink">{t("Аккаунттар тізімі көрсетіліп тұр. Мұрағаттау функциясын қосу үшін Supabase-тағы барлық жаңа migration файлдарын ретімен қолданыңыз.|Список аккаунтов отображается. Чтобы включить архивирование, примените все новые migration-файлы в Supabase по порядку.|The account list is available. Apply the new Supabase migrations in order to enable archiving.")}</p>}
 
       {err && <p role="alert" className="rounded-xl bg-red-500/10 px-4 py-3 text-sm text-red-500">{err}</p>}
 
@@ -194,7 +214,7 @@ export default function AdminUsers() {
                       </button>}
                       {archived
                         ? <button type="button" disabled={busy === r.id} onClick={() => void run(r.id, () => restoreUser(r.id))} className="btn btn-s">{t("Қалпына келтіру|Восстановить|Restore")}</button>
-                        : <button type="button" disabled={isMe || isAdmin || busy === r.id} onClick={() => { setArchiveFor(r); setArchiveReason(""); setArchiveConfirm(""); }} className="btn btn-s text-red-600">{t("Мұрағаттау|Архивировать|Archive")}</button>}
+                        : archiveSupport !== "migration-required" && <button type="button" disabled={isMe || isAdmin || busy === r.id} onClick={() => { setArchiveFor(r); setArchiveReason(""); setArchiveConfirm(""); }} className="btn btn-s text-red-600">{t("Мұрағаттау|Архивировать|Archive")}</button>}
                     </div>
                   </td>
                 </tr>
