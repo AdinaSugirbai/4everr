@@ -68,28 +68,6 @@ export async function setBanned(id: string, banned: boolean) {
   if (error) throw error;
 }
 
-export async function updateVacancy(id: string, fields: { title: string; company: string; city: string; salary: string; level: string }) {
-  const { error } = await supabase().rpc("admin_update_vacancy", {
-    target: id,
-    new_title: fields.title.trim(),
-    new_company: fields.company.trim(),
-    new_city: fields.city.trim(),
-    new_salary: fields.salary.trim(),
-    new_level: fields.level.trim(),
-  });
-  if (error) throw error;
-}
-
-export async function setVacancyStatus(id: string, status: "ACTIVE" | "PAUSED") {
-  const { error } = await supabase().rpc("admin_set_vacancy_status", { target: id, new_status: status });
-  if (error) throw error;
-}
-
-export async function deleteVacancy(id: string) {
-  const { error } = await supabase().rpc("admin_delete_vacancy", { target: id });
-  if (error) throw error;
-}
-
 export async function setAppStatus(id: string, status: AppStatus) {
   const { error } = await supabase().rpc("admin_set_app_status", { target: id, new_status: status });
   if (error) throw error;
