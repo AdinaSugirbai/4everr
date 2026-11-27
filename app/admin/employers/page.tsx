@@ -22,14 +22,38 @@ export default function AdminEmployers() {
   const [busy, setBusy] = useState<string | null>(null);
   const [references, setReferences] = useState<Record<string, string>>({});
   const [notes, setNotes] = useState<Record<string, string>>({});
+  const [verificationSchemaReady, setVerificationSchemaReady] = useState(true);
 
   const load = useCallback(async () => {
     setErr("");
-    const { data, error } = await supabase().from("profiles")
+    const client = supabase();
+    const { data, error } = await client.from("profiles")
       .select("id, name, email, banned, verified, company_name, company_logo, company_about, contact_phone, bin, city, company_industry, company_website, verification_requested_at, verification_reference, verification_notes")
       .eq("role", "EMPLOYER").order("verification_requested_at", { ascending: false, nullsFirst: false });
-    if (error) setErr(error.message);
-    else setRows((data ?? []) as Employer[]);
+    if (!error) {
+      setVerificationSchemaReady(true);
+      setRows((data ?? []) as Employer[]);
+      return;
+    }
+
+    // Older Supabase projects may have the employer records but not the review columns yet.
+    if (error.code === "42703" || error.code === "PGRST204") {
+      const fallback = await client.from("profiles")
+        .select("id, name, email, banned, created_at")
+        .eq("role", "EMPLOYER").order("created_at", { ascending: false });
+      if (!fallback.error) {
+        setVerificationSchemaReady(false);
+        setRows((fallback.data ?? []).map((row) => ({
+          ...row, verified: false, company_name: null, company_logo: null, company_about: null,
+          contact_phone: null, bin: null, city: null, company_industry: null, company_website: null,
+          verification_requested_at: null, verification_reference: null, verification_notes: null,
+        })) as Employer[]);
+        return;
+      }
+      setErr(fallback.error.message);
+      return;
+    }
+    setErr(error.message);
   }, []);
 
   useEffect(() => { void load(); }, [load]);
@@ -60,6 +84,7 @@ export default function AdminEmployers() {
     <div className="grid gap-4">
       <header><h1 className="text-2xl font-bold text-ink">{t("Жұмыс берушілер|Работодатели|Employers")} ({rows.length})</h1><p className="mt-1 text-sm text-mute">{t("Тексеруді күтіп тұрғаны|Ожидают проверки|Awaiting review")}: {requested}</p></header>
       {err && <p role="alert" className="rounded-xl bg-red-500/10 px-4 py-3 text-sm text-red-500">{err}</p>}
+      {!verificationSchemaReady && <p className="rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-ink">{t("Жұмыс берушілер тізімі көрсетілді. Растау деректері мен әрекеттері үшін Supabase миграцияларын атауы бойынша ретімен орындаңыз.|Список работодателей показан. Чтобы включить проверку компаний и действия, примените миграции Supabase по порядку.|The employer list is available. Apply the Supabase migrations in filename order to enable verification details and actions.")}</p>}
       <div className="grid gap-4">
         {rows.map((e) => {
           const reviewPending = Boolean(e.verification_requested_at && !e.verified);
@@ -84,7 +109,7 @@ export default function AdminEmployers() {
             </div>
             {e.company_about && <p className="whitespace-pre-line text-sm text-mute">{e.company_about}</p>}
             {e.verification_reference && <p className="text-xs text-mute">{t("Соңғы тексеру дереккөзі|Источник последней проверки|Last review source")}: {e.verification_reference}</p>}
-            {reviewPending && <section className="grid gap-3 rounded-xl bg-soft/60 p-4">
+            {verificationSchemaReady && reviewPending && <section className="grid gap-3 rounded-xl bg-soft/60 p-4">
               <h2 className="font-semibold">{t("Компанияны ресми дереккөзбен салыстырып тексеріңіз|Сверьте компанию с официальным источником|Check the company against an official source")}</h2>
               <label className="grid gap-1 text-sm font-semibold">{t("Тексерілген дереккөз немесе сілтеме|Проверенный источник или ссылка|Verified source or reference")}<input className="inp" value={references[e.id] ?? ""} onChange={(ev) => setReferences((v) => ({ ...v, [e.id]: ev.target.value }))} placeholder="https://…" /></label>
               <label className="grid gap-1 text-sm font-semibold">{t("Ескерту|Заметка|Review note")}<textarea className="inp" rows={2} value={notes[e.id] ?? ""} onChange={(ev) => setNotes((v) => ({ ...v, [e.id]: ev.target.value }))} /></label>
