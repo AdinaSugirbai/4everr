@@ -4,9 +4,9 @@ import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase/client";
-import { updateProfileDetails, type ProfileDetails } from "@/lib/admin";
+import { setRole as updateUserRole, updateProfileDetails, type ProfileDetails } from "@/lib/admin";
 import { useI18n } from "@/lib/i18n";
-import type { Role } from "@/lib/auth";
+import { useAuth, type Role } from "@/lib/auth";
 
 type Profile = ProfileDetails & {
   id: string;
@@ -27,6 +27,7 @@ const roleLabel: Record<Role, string> = {
 
 export default function AdminUserDetails() {
   const { id } = useParams<{ id: string }>();
+  const { user: me } = useAuth();
   const { t } = useI18n();
   const [profile, setProfile] = useState<Profile | null>(null);
   const [draft, setDraft] = useState<ProfileDetails | null>(null);
@@ -34,6 +35,8 @@ export default function AdminUserDetails() {
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
   const [saved, setSaved] = useState(false);
+  const [roleDraft, setRoleDraft] = useState<Exclude<Role, "ADMIN">>("CANDIDATE");
+  const [roleSaved, setRoleSaved] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -58,6 +61,7 @@ export default function AdminUserDetails() {
         bin: String(raw.bin ?? ""),
       };
       setProfile(row);
+      if (row.role !== "ADMIN") setRoleDraft(row.role);
       setDraft({
         name: row.name ?? "",
         phone: row.phone ?? "",
@@ -100,6 +104,24 @@ export default function AdminUserDetails() {
     }
   }
 
+  async function changeRole() {
+    if (!profile || profile.role === "ADMIN" || profile.id === me?.id || profile.role === roleDraft) return;
+    const confirmed = window.confirm(t("Рөлді өзгерту пайдаланушының қолжетімділігін өзгертеді. Жалғастырасыз ба?|Смена роли изменит доступ пользователя. Продолжить?|Changing this role will change the user's access. Continue?"));
+    if (!confirmed) return;
+    setBusy(true);
+    setErr("");
+    setRoleSaved(false);
+    try {
+      await updateUserRole(profile.id, roleDraft);
+      await load();
+      setRoleSaved(true);
+    } catch (e) {
+      setErr((e as Error).message);
+    } finally {
+      setBusy(false);
+    }
+  }
+
   if (loading) return <p className="text-mute">{t("Жүктелуде...|Загрузка...|Loading...")}</p>;
   if (!profile || !draft) return <div className="grid gap-3"><p role="alert" className="text-red-500">{err}</p><Link className="btn btn-s w-fit" href="/admin/users">{t("Тізімге оралу|К списку|Back to list")}</Link></div>;
 
@@ -126,7 +148,19 @@ export default function AdminUserDetails() {
         <h2 className="font-bold">{t("Аккаунт ақпараты|Данные аккаунта|Account details")}</h2>
         <div className="grid gap-4 sm:grid-cols-2">
           <div className="grid gap-1 text-sm"><span className="font-semibold">{t("Email (тек оқу)|Email (только чтение)|Email (read only)")}</span><input className="inp opacity-70" value={profile.email} readOnly /></div>
-          <div className="grid gap-1 text-sm"><span className="font-semibold">{t("Рөлі|Роль|Role")}</span><input className="inp opacity-70" value={t(roleLabel[profile.role])} readOnly /></div>
+          <div className="grid gap-2 text-sm">
+            <label htmlFor="account-role" className="font-semibold">{t("Рөлі|Роль|Role")}</label>
+            {profile.role === "ADMIN" ? <input className="inp opacity-70" value={t(roleLabel[profile.role])} readOnly /> : <>
+              <select id="account-role" className="inp" value={roleDraft} onChange={(e) => { setRoleDraft(e.target.value as Exclude<Role, "ADMIN">); setRoleSaved(false); }} disabled={busy || profile.id === me?.id || Boolean(profile.archived_at)}>
+                <option value="CANDIDATE">{t(roleLabel.CANDIDATE)}</option>
+                <option value="EMPLOYER">{t(roleLabel.EMPLOYER)}</option>
+              </select>
+              {profile.id === me?.id && <span className="text-xs text-mute">{t("Өз рөліңізді өзгерте алмайсыз.|Свою роль изменить нельзя.|You cannot change your own role.")}</span>}
+              {roleDraft === "EMPLOYER" && <span className="text-xs text-mute">{t("Жұмыс беруші рөлін алғаннан кейін компания профилін толтырып, әкімші растауын алу қажет. Расталғанша вакансия жариялау жабық болады.|После назначения роли работодателя нужно заполнить профиль компании и пройти проверку администратора. До подтверждения публикация вакансий закрыта.|After this role is assigned, the user must complete the company profile and pass admin verification before posting vacancies.")}</span>}
+              {profile.role !== roleDraft && <button type="button" className="btn btn-s w-fit" onClick={() => void changeRole()} disabled={busy || profile.id === me?.id || Boolean(profile.archived_at)}>{t("Рөлді өзгерту|Изменить роль|Change role")}</button>}
+              {roleSaved && <span role="status" className="text-xs text-brand">{t("Рөл өзгертілді.|Роль обновлена.|Role updated.")}</span>}
+            </>}
+          </div>
           {field("name", "Аты-жөні|Имя и фамилия|Full name")}
           {field("phone", "Телефон|Телефон|Phone")}
           {field("city", "Қала|Город|City")}
