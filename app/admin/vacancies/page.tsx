@@ -1,7 +1,6 @@
 "use client";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase/client";
-import { setVacancyStatus, deleteVacancy, updateVacancy } from "@/lib/admin";
 import { useI18n } from "@/lib/i18n";
 import { FiEye } from "react-icons/fi";
 
@@ -23,17 +22,21 @@ type Filter = "ALL" | "ACTIVE" | "PAUSED";
 export default function AdminVacancies() {
   const [rows, setRows] = useState<V[]>([]);
   const [filter, setFilter] = useState<Filter>("ALL");
-  const [drafts, setDrafts] = useState<Record<string, Pick<V, "title" | "company" | "city" | "salary" | "level">>>({});
   const { t } = useI18n();
-  const expiry = useRef<Record<string, string>>({});
-  const moderate = async (id: string, m: V["moderation"], date: string) => {
-    const { error } = await supabase().rpc("admin_set_vacancy_moderation", { target: id, new_moderation: m, new_expires: date ? new Date(date).toISOString() : null });
-    if (error) throw error;
-  };
   const [err, setErr] = useState<string | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
 
+  async function moderate(id: string, moderation: V["moderation"]) {
+    const { error } = await supabase().rpc("admin_set_vacancy_moderation", {
+      target: id,
+      new_moderation: moderation,
+      new_expires: null,
+    });
+    if (error) throw error;
+  }
+
   const load = useCallback(async () => {
+    setErr(null);
     const base = supabase()
       .from("vacancies")
       .select("id, title, company, city, salary, level, status, created_at, moderation, expires_at, views")
@@ -45,21 +48,17 @@ export default function AdminVacancies() {
 
   useEffect(() => { load(); }, [load]);
 
-  async function run(id: string, fn: () => Promise<void>) {
+  async function run(id: string, moderation: V["moderation"]) {
     setErr(null);
     setBusy(id);
     try {
-      await fn();
+      await moderate(id, moderation);
       await load();
     } catch (e) {
       setErr((e as Error).message);
     } finally {
       setBusy(null);
     }
-  }
-
-  function edit(id: string, field: "title" | "company" | "city" | "salary" | "level", value: string, row: V) {
-    setDrafts({ ...drafts, [id]: { ...(drafts[id] ?? row), [field]: value } });
   }
 
   return (
@@ -81,6 +80,8 @@ export default function AdminVacancies() {
         </div>
       </div>
 
+      <p className="text-sm text-mute">{t("Вакансия мазмұнын өзгертуге болмайды. Әкімші тек мақұлдайды немесе қабылдамайды.|Содержание вакансии нельзя редактировать. Администратор может только одобрить или отклонить её.|Vacancy content is read-only. Admins may only approve or reject a vacancy.")}</p>
+
       {err && <p className="rounded-xl bg-red-500/10 px-4 py-3 text-sm text-red-500">{err}</p>}
 
       <div className="overflow-x-auto rounded-2xl border border-line bg-sf">
@@ -94,19 +95,17 @@ export default function AdminVacancies() {
               <th className="px-4 py-3">{t("Жалақы|Зарплата|Salary")}</th>
               <th className="px-4 py-3">{t("Күйі|Статус|Status")}</th>
               <th className="px-4 py-3">{t("Тексеру және мерзім|Модерация и срок|Moderation & expiry")}</th>
-              <th className="px-4 py-3">{t("Әрекет|Действия|Actions")}</th>
             </tr>
           </thead>
           <tbody>
             {rows.map((r) => {
-              const draft = drafts[r.id] ?? r;
               return (
               <tr key={r.id} className="border-b border-line last:border-0">
-                <td className="px-4 py-3"><input aria-label={t("Атауы|Название|Title")} className="w-48 rounded-lg border border-line bg-bg px-2 py-1 text-ink" value={draft.title} onChange={(e) => edit(r.id, "title", e.target.value, r)} /></td>
-                <td className="px-4 py-3"><input aria-label={t("Компания|Компания|Company")} className="w-40 rounded-lg border border-line bg-bg px-2 py-1 text-ink" value={draft.company} onChange={(e) => edit(r.id, "company", e.target.value, r)} /></td>
-                <td className="px-4 py-3"><input aria-label={t("Қала|Город|City")} className="w-32 rounded-lg border border-line bg-bg px-2 py-1 text-ink" value={draft.city} onChange={(e) => edit(r.id, "city", e.target.value, r)} /></td>
-                <td className="px-4 py-3"><input aria-label={t("Деңгей|Уровень|Level")} className="w-24 rounded-lg border border-line bg-bg px-2 py-1 text-ink" value={draft.level} onChange={(e) => edit(r.id, "level", e.target.value, r)} /></td>
-                <td className="px-4 py-3"><input aria-label={t("Жалақы|Зарплата|Salary")} className="w-32 rounded-lg border border-line bg-bg px-2 py-1 text-ink" value={draft.salary} onChange={(e) => edit(r.id, "salary", e.target.value, r)} /></td>
+                <td className="px-4 py-3 font-semibold text-ink">{r.title}</td>
+                <td className="px-4 py-3 text-ink">{r.company}</td>
+                <td className="px-4 py-3 text-ink">{r.city}</td>
+                <td className="px-4 py-3 text-ink">{r.level}</td>
+                <td className="px-4 py-3 text-ink">{r.salary}</td>
                 <td className="px-4 py-3">
                   <span className={r.status === "ACTIVE" ? "text-brand" : "text-amber-500"}>
                     {r.status === "ACTIVE" ? t("Белсенді|Активная|Active") : t("Тоқтатылған|Приостановлена|Paused")}
@@ -117,46 +116,17 @@ export default function AdminVacancies() {
                     <span className={r.moderation === "APPROVED" ? "text-brand" : r.moderation === "PENDING" ? "text-amber-500" : "text-red-500"}>
                       {r.moderation === "APPROVED" ? t("Рұқсат етілген|Одобрена|Approved") : r.moderation === "PENDING" ? t("Тексеруде|На проверке|Pending") : t("Қабылданбады|Отклонена|Rejected")} · <FiEye className="inline" aria-hidden="true" /> {r.views}
                     </span>
-                    <input type="date" aria-label={t("Жарамдылық мерзімі|Срок действия|Valid until")} defaultValue={r.expires_at?.slice(0, 10) ?? ""} onChange={(e) => (expiry.current[r.id] = e.target.value)} className="rounded-lg border border-line bg-bg px-2 py-1 text-ink" />
-                    <div className="flex gap-2">
-                      <button disabled={busy === r.id} onClick={() => run(r.id, () => moderate(r.id, "APPROVED", expiry.current[r.id] ?? r.expires_at?.slice(0, 10) ?? ""))} className="rounded-lg bg-brand px-3 py-1 text-white disabled:opacity-40">{t("Рұқсат ету|Одобрить|Approve")}</button>
-                      <button disabled={busy === r.id} onClick={() => run(r.id, () => moderate(r.id, "REJECTED", expiry.current[r.id] ?? r.expires_at?.slice(0, 10) ?? ""))} className="rounded-lg border border-line px-3 py-1 text-ink hover:bg-soft disabled:opacity-40">{t("Қабылдамау|Отклонить|Reject")}</button>
+                    <span className="text-xs text-mute">{t("Жарамдылық мерзімі|Срок действия|Valid until")}: {r.expires_at ? new Date(r.expires_at).toLocaleDateString() : "—"}</span>
+                    <div className="flex flex-wrap gap-2">
+                      <button type="button" disabled={busy === r.id || r.moderation === "APPROVED"} onClick={() => void run(r.id, "APPROVED")} className="rounded-lg bg-brand px-3 py-1 text-white disabled:opacity-40">{t("Мақұлдау|Одобрить|Approve")}</button>
+                      <button type="button" disabled={busy === r.id || r.moderation === "REJECTED"} onClick={() => void run(r.id, "REJECTED")} className="rounded-lg border border-line px-3 py-1 text-ink hover:bg-soft disabled:opacity-40">{t("Қабылдамау|Отклонить|Reject")}</button>
                     </div>
-                  </div>
-                </td>
-                <td className="px-4 py-3">
-                  <div className="flex flex-wrap gap-2">
-                    <button
-                      disabled={busy === r.id || JSON.stringify(draft) === JSON.stringify(r)}
-                      onClick={() => run(r.id, () => updateVacancy(r.id, draft))}
-                      className="rounded-lg bg-brand px-3 py-1 text-white disabled:opacity-40"
-                    >
-                      {t("Өзгерісті сақтау|Сохранить изменения|Save changes")}
-                    </button>
-                    <button
-                      disabled={busy === r.id}
-                      onClick={() =>
-                        run(r.id, () => setVacancyStatus(r.id, r.status === "ACTIVE" ? "PAUSED" : "ACTIVE"))
-                      }
-                      className="rounded-lg border border-line px-3 py-1 text-ink hover:bg-soft disabled:opacity-40"
-                    >
-                      {r.status === "ACTIVE" ? t("Тоқтату|Приостановить|Pause") : t("Қосу|Активировать|Activate")}
-                    </button>
-                    <button
-                      disabled={busy === r.id}
-                      onClick={() => {
-                        if (confirm(t("Вакансияны өшіресіз бе?|Удалить вакансию?|Delete this vacancy?"))) run(r.id, () => deleteVacancy(r.id));
-                      }}
-                      className="rounded-lg bg-red-500/10 px-3 py-1 text-red-500 disabled:opacity-40"
-                    >
-                      {t("Өшіру|Удалить|Delete")}
-                    </button>
                   </div>
                 </td>
               </tr>
             );})}
             {rows.length === 0 && !err && (
-              <tr><td colSpan={8} className="px-4 py-6 text-center text-mute">{t("Вакансия жоқ.|Вакансий нет.|No vacancies.")}</td></tr>
+              <tr><td colSpan={7} className="px-4 py-6 text-center text-mute">{t("Вакансия жоқ.|Вакансий нет.|No vacancies.")}</td></tr>
             )}
           </tbody>
         </table>
