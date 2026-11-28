@@ -1,61 +1,50 @@
 "use client";
-import { useCallback, useEffect, useState } from "react";
+
+import Link from "next/link";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import AdminLoading from "@/components/AdminLoading";
 import { supabase } from "@/lib/supabase/client";
 import { useI18n } from "@/lib/i18n";
 
-type D = { id: string; name: string; description: string; skills: string; materials: string };
+type Direction = { id: string; name: string; description: string; position: number };
+type Sort = "position" | "name" | "name-desc";
 
 export default function AdminDirections() {
   const { t } = useI18n();
-  const [rows, setRows] = useState<D[]>([]);
-  const [err, setErr] = useState<string | null>(null);
-  const [newName, setNewName] = useState("");
+  const [rows, setRows] = useState<Direction[]>([]);
+  const [query, setQuery] = useState("");
+  const [sort, setSort] = useState<Sort>("position");
+  const [filter, setFilter] = useState("ALL");
+  const [loading, setLoading] = useState(true);
+  const [err, setErr] = useState("");
 
   const load = useCallback(async () => {
-    const { data, error } = await supabase().from("it_directions").select("id, name, description, skills, materials").order("position");
-    if (error) setErr(error.message); else setRows((data ?? []) as D[]);
+    setLoading(true);
+    const { data, error } = await supabase().from("it_directions").select("id, name, description, position").order("position");
+    if (error) setErr(error.message); else { setErr(""); setRows((data ?? []) as Direction[]); }
+    setLoading(false);
   }, []);
-  useEffect(() => { load(); }, [load]);
+  useEffect(() => { void load(); }, [load]);
 
-  const patch = (id: string, f: Partial<D>) => setRows((r) => r.map((x) => (x.id === id ? { ...x, ...f } : x)));
-  async function save(d: D) {
-    const { error } = await supabase().from("it_directions").update({ name: d.name, description: d.description, skills: d.skills, materials: d.materials }).eq("id", d.id);
-    setErr(error?.message ?? null);
-  }
-  async function add() {
-    if (!newName.trim()) return;
-    const { error } = await supabase().from("it_directions").insert({ name: newName.trim(), position: rows.length + 1 });
-    setErr(error?.message ?? null); setNewName(""); await load();
-  }
-  async function del(id: string) {
-    if (!confirm(t("Бағытты өшіресіз бе?|Удалить направление?|Delete this direction?"))) return;
-    const { error } = await supabase().from("it_directions").delete().eq("id", id);
-    setErr(error?.message ?? null); await load();
-  }
-  const inp = "w-full rounded-lg border border-line bg-bg px-3 py-2 text-sm text-ink outline-none focus:border-brand";
+  const visible = useMemo(() => {
+    const term = query.trim().toLocaleLowerCase();
+    return rows.filter((row) => `${row.name} ${row.description}`.toLocaleLowerCase().includes(term)
+      && (filter === "ALL" || (filter === "HAS_DESCRIPTION" ? Boolean(row.description.trim()) : !row.description.trim()))).sort((a, b) => {
+      if (sort === "name") return a.name.localeCompare(b.name);
+      if (sort === "name-desc") return b.name.localeCompare(a.name);
+      return a.position - b.position;
+    });
+  }, [rows, query, sort, filter]);
 
   return (
-    <div className="space-y-4">
-      <h1 className="text-2xl font-bold text-ink">{t("IT бағыттары|IT-направления|IT Directions")}</h1>
-      {err && <p className="rounded-xl bg-red-500/10 px-4 py-3 text-sm text-red-500">{err}</p>}
-      <div className="flex gap-2">
-        <input value={newName} onChange={(e) => setNewName(e.target.value)} placeholder={t("Жаңа бағыт аты|Название нового направления|New direction name")} className={inp} />
-        <button onClick={add} className="shrink-0 rounded-xl bg-brand px-4 text-white">+</button>
-      </div>
-      <div className="grid gap-4 md:grid-cols-2">
-        {rows.map((d) => (
-          <div key={d.id} className="space-y-2 rounded-2xl border border-line bg-sf p-5">
-            <input value={d.name} onChange={(e) => patch(d.id, { name: e.target.value })} className={inp + " font-semibold"} />
-            <textarea rows={2} value={d.description} onChange={(e) => patch(d.id, { description: e.target.value })} placeholder={t("Сипаттама|Описание|Description")} className={inp} />
-            <input value={d.skills} onChange={(e) => patch(d.id, { skills: e.target.value })} placeholder={t("Қажетті дағдылар (үтірмен)|Навыки (через запятую)|Required skills (comma separated)")} className={inp} />
-            <textarea rows={2} value={d.materials} onChange={(e) => patch(d.id, { materials: e.target.value })} placeholder={t("Оқу материалдары (сілтемелер)|Учебные материалы (ссылки)|Learning materials (links)")} className={inp} />
-            <div className="flex gap-2">
-              <button onClick={() => save(d)} className="rounded-lg bg-brand px-3 py-1 text-sm text-white">{t("Сақтау|Сохранить|Save")}</button>
-              <button onClick={() => del(d.id)} className="rounded-lg bg-red-500/10 px-3 py-1 text-sm text-red-500">{t("Өшіру|Удалить|Delete")}</button>
-            </div>
-          </div>
-        ))}
-      </div>
+    <div className="grid gap-4">
+      <header className="flex flex-wrap items-end justify-between gap-3"><div><h1 className="text-2xl font-bold text-ink">{t("IT бағыттары|IT-направления|IT directions")} ({rows.length})</h1><p className="mt-1 text-sm text-mute">{t("Өңдеу үшін бағытты ашыңыз.|Откройте направление, чтобы изменить его.|Open a direction to edit it.")}</p></div><Link href="/admin/directions/new" className="btn btn-p">{t("Бағыт қосу|Добавить направление|Add direction")}</Link></header>
+      <div className="grid gap-2 sm:grid-cols-[1fr_200px_200px]"><input className="inp" value={query} onChange={(e) => setQuery(e.target.value)} placeholder={t("Бағыттан іздеу|Поиск направлений|Search directions")} /><select className="inp" value={filter} onChange={(e) => setFilter(e.target.value)} aria-label={t("Сипаттама бойынша сүзу|Фильтр по описанию|Filter by description")}><option value="ALL">{t("Барлығы|Все|All")}</option><option value="HAS_DESCRIPTION">{t("Сипаттамасы бар|С описанием|Has description")}</option><option value="NO_DESCRIPTION">{t("Сипаттамасы жоқ|Без описания|No description")}</option></select><select className="inp" value={sort} onChange={(e) => setSort(e.target.value as Sort)} aria-label={t("Сұрыптау|Сортировка|Sort")}><option value="position">{t("Бастапқы рет|Исходный порядок|Original order")}</option><option value="name">{t("Атауы A–Я|Название А–Я|Name A–Z")}</option><option value="name-desc">{t("Атауы Я–А|Название Я–А|Name Z–A")}</option></select></div>
+      {err && <p role="alert" className="rounded-xl bg-red-500/10 px-4 py-3 text-sm text-red-500">{err}</p>}
+      {loading ? <AdminLoading /> : <div className="grid gap-2">
+        {visible.map((row) => <Link href={`/admin/directions/${row.id}`} key={row.id} className="rounded-2xl border border-line bg-sf p-4 transition hover:border-brand hover:bg-soft"><div className="flex items-center justify-between gap-4"><div className="min-w-0"><h2 className="font-semibold text-ink">{row.name}</h2><p className="mt-1 line-clamp-2 text-sm text-mute">{row.description || "—"}</p></div><span className="text-mute" aria-hidden="true">›</span></div></Link>)}
+        {visible.length === 0 && <p className="rounded-2xl border border-line bg-sf p-6 text-center text-mute">{t("Бағыт табылмады.|Направления не найдены.|No directions found.")}</p>}
+      </div>}
     </div>
   );
 }
