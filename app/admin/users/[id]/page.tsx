@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
+import AdminLoading from "@/components/AdminLoading";
 import { supabase } from "@/lib/supabase/client";
 import { setRole as updateUserRole, updateProfileDetails, type ProfileDetails } from "@/lib/admin";
 import { useI18n } from "@/lib/i18n";
@@ -18,6 +19,7 @@ type Profile = ProfileDetails & {
   archive_reason: string | null;
   created_at: string;
 };
+type Stat = { label: string; value: number };
 
 const roleLabel: Record<Role, string> = {
   CANDIDATE: "Кандидат|Кандидат|Candidate",
@@ -37,6 +39,7 @@ export default function AdminUserDetails() {
   const [saved, setSaved] = useState(false);
   const [roleDraft, setRoleDraft] = useState<Exclude<Role, "ADMIN">>("CANDIDATE");
   const [roleSaved, setRoleSaved] = useState(false);
+  const [stats, setStats] = useState<Stat[]>([]);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -62,6 +65,28 @@ export default function AdminUserDetails() {
       };
       setProfile(row);
       if (row.role !== "ADMIN") setRoleDraft(row.role);
+      const db = supabase();
+      const head = { count: "exact" as const, head: true };
+      const statQueries = row.role === "EMPLOYER"
+        ? [
+            db.from("vacancies").select("id", head).eq("employer_id", id),
+            db.from("vacancies").select("id", head).eq("employer_id", id).eq("status", "ACTIVE").eq("moderation", "APPROVED"),
+            db.from("applications").select("id", head).eq("employer_id", id),
+          ]
+        : row.role === "CANDIDATE"
+          ? [
+              db.from("resumes").select("id", head).eq("user_id", id),
+              db.from("applications").select("id", head).eq("candidate_id", id),
+              db.from("applications").select("id", head).eq("candidate_id", id).eq("status", "NEW"),
+            ]
+          : [db.from("admin_log").select("id", head).eq("actor_id", id)];
+      const values = await Promise.all(statQueries);
+      const labels = row.role === "EMPLOYER"
+        ? ["Барлық вакансия|Все вакансии|Total vacancies", "Белсенді вакансия|Активные вакансии|Active vacancies", "Өтінімдер|Заявки|Applications"]
+        : row.role === "CANDIDATE"
+          ? ["Резюме|Резюме|Resumes", "Жіберілген өтінім|Отправленные заявки|Applications sent", "Жаңа өтінім|Новые заявки|New applications"]
+          : ["Әкімші әрекеті|Действия администратора|Admin actions"];
+      setStats(values.map((value, index) => ({ label: labels[index], value: value.count ?? 0 })));
       setDraft({
         name: row.name ?? "",
         phone: row.phone ?? "",
@@ -122,7 +147,7 @@ export default function AdminUserDetails() {
     }
   }
 
-  if (loading) return <p className="text-mute">{t("Жүктелуде...|Загрузка...|Loading...")}</p>;
+  if (loading) return <AdminLoading />;
   if (!profile || !draft) return <div className="grid gap-3"><p role="alert" className="text-red-500">{err}</p><Link className="btn btn-s w-fit" href="/admin/users">{t("Тізімге оралу|К списку|Back to list")}</Link></div>;
 
   const field = (key: keyof ProfileDetails, label: string, props: { multiline?: boolean } = {}) => (
@@ -143,6 +168,10 @@ export default function AdminUserDetails() {
           {profile.archived_at ? t("Мұрағатта|В архиве|Archived") : profile.banned ? t("Бұғатталған|Заблокирован|Blocked") : t("Белсенді|Активен|Active")}
         </span>
       </header>
+
+      <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3" aria-label={t("Аккаунт статистикасы|Статистика аккаунта|Account statistics")}>
+        {stats.map((item) => <article key={item.label} className="rounded-2xl border border-line bg-sf p-4"><p className="text-sm text-mute">{t(item.label)}</p><p className="mt-2 text-2xl font-bold text-brand">{item.value.toLocaleString()}</p></article>)}
+      </section>
 
       <section className="card grid gap-4 p-5">
         <h2 className="font-bold">{t("Аккаунт ақпараты|Данные аккаунта|Account details")}</h2>
