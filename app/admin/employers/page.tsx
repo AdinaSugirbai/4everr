@@ -26,6 +26,7 @@ export default function AdminEmployers() {
   const [references, setReferences] = useState<Record<string, string>>({});
   const [notes, setNotes] = useState<Record<string, string>>({});
   const [verificationSchemaReady, setVerificationSchemaReady] = useState(true);
+  const [companySchemaReady, setCompanySchemaReady] = useState(true);
   const [loading, setLoading] = useState(true);
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState<EmployerFilter>("ALL");
@@ -40,6 +41,7 @@ export default function AdminEmployers() {
       .eq("role", "EMPLOYER").order("verification_requested_at", { ascending: false, nullsFirst: false });
     if (!error) {
       setVerificationSchemaReady(true);
+      setCompanySchemaReady(true);
       setRows((data ?? []) as Employer[]);
       setLoading(false);
       return;
@@ -47,11 +49,38 @@ export default function AdminEmployers() {
 
     // Older Supabase projects may have the employer records but not the review columns yet.
     if (error.code === "42703" || error.code === "PGRST204") {
+      const companyFallback = await client.from("profiles")
+        .select("id, name, email, banned, verified, company_name, company_logo, company_about, contact_phone, bin, city, company_industry, company_website, created_at")
+        .eq("role", "EMPLOYER").order("created_at", { ascending: false });
+      if (!companyFallback.error) {
+        setVerificationSchemaReady(false);
+        setCompanySchemaReady(true);
+        setRows((companyFallback.data ?? []).map((row) => ({
+          ...row,
+          verification_requested_at: null, verification_reference: null, verification_notes: null,
+        })) as Employer[]);
+        setLoading(false);
+        return;
+      }
+      const coreCompanyFallback = await client.from("profiles")
+        .select("id, name, email, banned, verified, company_name, company_logo, company_about, contact_phone, bin, city, created_at")
+        .eq("role", "EMPLOYER").order("created_at", { ascending: false });
+      if (!coreCompanyFallback.error) {
+        setVerificationSchemaReady(false);
+        setCompanySchemaReady(true);
+        setRows((coreCompanyFallback.data ?? []).map((row) => ({
+          ...row, company_industry: null, company_website: null,
+          verification_requested_at: null, verification_reference: null, verification_notes: null,
+        })) as Employer[]);
+        setLoading(false);
+        return;
+      }
       const fallback = await client.from("profiles")
         .select("id, name, email, banned, created_at")
         .eq("role", "EMPLOYER").order("created_at", { ascending: false });
       if (!fallback.error) {
         setVerificationSchemaReady(false);
+        setCompanySchemaReady(false);
         setRows((fallback.data ?? []).map((row) => ({
           ...row, verified: false, company_name: null, company_logo: null, company_about: null,
           contact_phone: null, bin: null, city: null, company_industry: null, company_website: null,
