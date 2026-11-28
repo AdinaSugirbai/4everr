@@ -56,6 +56,8 @@ export default function Header() {
   const { user } = useAuth();
   const { t } = useI18n();
 
+  if (path.startsWith("/admin")) return null;
+
   const links: MenuItem[] = user ? menus[user.role] ?? [] : guestLinks;
   const home = user ? homes[user.role] ?? "/profile" : "/start";
   const active = (h: string) => path === h || (h !== "/admin" && path.startsWith(h + "/"));
