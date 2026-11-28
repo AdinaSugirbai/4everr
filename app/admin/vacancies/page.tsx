@@ -3,6 +3,8 @@ import { useCallback, useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase/client";
 import { useI18n } from "@/lib/i18n";
 import { FiEye } from "react-icons/fi";
+import AdminListToolbar from "@/components/AdminListToolbar";
+import AdminLoading from "@/components/AdminLoading";
 
 type V = {
   id: string;
@@ -18,10 +20,14 @@ type V = {
   views: number;
 };
 type Filter = "ALL" | "ACTIVE" | "PAUSED";
+type Sort = "newest" | "oldest" | "title" | "views";
 
 export default function AdminVacancies() {
   const [rows, setRows] = useState<V[]>([]);
   const [filter, setFilter] = useState<Filter>("ALL");
+  const [query, setQuery] = useState("");
+  const [sort, setSort] = useState<Sort>("newest");
+  const [loading, setLoading] = useState(true);
   const { t } = useI18n();
   const [err, setErr] = useState<string | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
@@ -36,15 +42,22 @@ export default function AdminVacancies() {
   }
 
   const load = useCallback(async () => {
+    setLoading(true);
     setErr(null);
-    const base = supabase()
+    let base = supabase()
       .from("vacancies")
-      .select("id, title, company, city, salary, level, status, created_at, moderation, expires_at, views")
-      .order("created_at", { ascending: false });
-    const { data, error } = filter === "ALL" ? await base : await base.eq("status", filter);
+      .select("id, title, company, city, salary, level, status, created_at, moderation, expires_at, views");
+    if (filter !== "ALL") base = base.eq("status", filter);
+    const safeQuery = query.trim().replace(/[^\p{L}\p{N}@._+\-\s]/gu, " ").replace(/\s+/g, " ");
+    if (safeQuery) base = base.or(`title.ilike.%${safeQuery}%,company.ilike.%${safeQuery}%,city.ilike.%${safeQuery}%`);
+    if (sort === "title") base = base.order("title", { ascending: true });
+    else if (sort === "views") base = base.order("views", { ascending: false }).order("created_at", { ascending: false });
+    else base = base.order("created_at", { ascending: sort === "oldest" });
+    const { data, error } = await base;
     if (error) setErr(error.message);
     else setRows((data ?? []) as V[]);
-  }, [filter]);
+    setLoading(false);
+  }, [filter, query, sort]);
 
   useEffect(() => { load(); }, [load]);
 
@@ -65,24 +78,13 @@ export default function AdminVacancies() {
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h1 className="text-2xl font-bold text-ink">{t("Вакансиялар|Вакансии|Vacancies")} ({rows.length})</h1>
-        <div className="flex gap-2">
-          {(["ALL", "ACTIVE", "PAUSED"] as Filter[]).map((f) => (
-            <button
-              key={f}
-              onClick={() => setFilter(f)}
-              className={`rounded-xl px-4 py-2 text-sm ${
-                filter === f ? "bg-brand text-white" : "border border-line bg-sf text-ink"
-              }`}
-            >
-              {f === "ALL" ? t("Барлығы|Все|All") : f === "ACTIVE" ? t("Белсенді|Активные|Active") : t("Тоқтатылған|Приостановленные|Paused")}
-            </button>
-          ))}
-        </div>
       </div>
 
       <p className="text-sm text-mute">{t("Вакансия мазмұнын өзгертуге болмайды. Әкімші тек мақұлдайды немесе қабылдамайды.|Содержание вакансии нельзя редактировать. Администратор может только одобрить или отклонить её.|Vacancy content is read-only. Admins may only approve or reject a vacancy.")}</p>
+      <AdminListToolbar search={query} onSearch={setQuery} placeholder="Вакансия, компания немесе қала|Вакансия, компания или город|Search vacancy, company or city" sort={sort} onSort={(value) => setSort(value as Sort)} sortOptions={[{ value: "newest", label: "Жаңадан ескіге|Сначала новые|Newest first" }, { value: "oldest", label: "Ескіден жаңаға|Сначала старые|Oldest first" }, { value: "title", label: "Атауы бойынша|По названию|By title" }, { value: "views", label: "Көп қаралғаны|По просмотрам|Most viewed" }]} filters={<select className="inp min-w-0" value={filter} onChange={(e) => setFilter(e.target.value as Filter)} aria-label={t("Күй бойынша сүзу|Фильтр по статусу|Filter by status")}><option value="ALL">{t("Барлығы|Все|All")}</option><option value="ACTIVE">{t("Белсенді|Активные|Active")}</option><option value="PAUSED">{t("Тоқтатылған|Приостановленные|Paused")}</option></select>} />
 
       {err && <p className="rounded-xl bg-red-500/10 px-4 py-3 text-sm text-red-500">{err}</p>}
+      {loading && <AdminLoading />}
 
       <div className="overflow-x-auto rounded-2xl border border-line bg-sf">
         <table className="w-full text-left text-sm">
@@ -125,7 +127,7 @@ export default function AdminVacancies() {
                 </td>
               </tr>
             );})}
-            {rows.length === 0 && !err && (
+            {rows.length === 0 && !err && !loading && (
               <tr><td colSpan={7} className="px-4 py-6 text-center text-mute">{t("Вакансия жоқ.|Вакансий нет.|No vacancies.")}</td></tr>
             )}
           </tbody>

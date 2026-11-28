@@ -2,6 +2,8 @@
 
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
+import AdminListToolbar from "@/components/AdminListToolbar";
+import AdminLoading from "@/components/AdminLoading";
 import { supabase } from "@/lib/supabase/client";
 import { adminReviewEmployer, setBanned } from "@/lib/admin";
 import { useI18n } from "@/lib/i18n";
@@ -14,6 +16,7 @@ type Employer = {
   verification_requested_at: string | null; verification_reference: string | null;
   verification_notes: string | null;
 };
+type EmployerFilter = "ALL" | "PENDING" | "VERIFIED" | "UNVERIFIED" | "BLOCKED";
 
 export default function AdminEmployers() {
   const { t } = useI18n();
@@ -23,8 +26,13 @@ export default function AdminEmployers() {
   const [references, setReferences] = useState<Record<string, string>>({});
   const [notes, setNotes] = useState<Record<string, string>>({});
   const [verificationSchemaReady, setVerificationSchemaReady] = useState(true);
+  const [loading, setLoading] = useState(true);
+  const [query, setQuery] = useState("");
+  const [filter, setFilter] = useState<EmployerFilter>("ALL");
+  const [sort, setSort] = useState("request");
 
   const load = useCallback(async () => {
+    setLoading(true);
     setErr("");
     const client = supabase();
     const { data, error } = await client.from("profiles")
@@ -33,6 +41,7 @@ export default function AdminEmployers() {
     if (!error) {
       setVerificationSchemaReady(true);
       setRows((data ?? []) as Employer[]);
+      setLoading(false);
       return;
     }
 
@@ -48,12 +57,15 @@ export default function AdminEmployers() {
           contact_phone: null, bin: null, city: null, company_industry: null, company_website: null,
           verification_requested_at: null, verification_reference: null, verification_notes: null,
         })) as Employer[]);
+        setLoading(false);
         return;
       }
       setErr(fallback.error.message);
+      setLoading(false);
       return;
     }
     setErr(error.message);
+    setLoading(false);
   }, []);
 
   useEffect(() => { void load(); }, [load]);
@@ -78,6 +90,17 @@ export default function AdminEmployers() {
     void run(e.id, () => adminReviewEmployer(e.id, approve, proof, note));
   }
 
+  const filteredRows = rows.filter((e) => {
+    const search = query.trim().toLocaleLowerCase();
+    const textMatches = `${e.company_name ?? ""} ${e.name} ${e.email} ${e.bin ?? ""} ${e.city ?? ""}`.toLocaleLowerCase().includes(search);
+    const stateMatches = filter === "ALL" || (filter === "VERIFIED" && e.verified) || (filter === "BLOCKED" && e.banned)
+      || (filter === "PENDING" && e.verification_requested_at && !e.verified)
+      || (filter === "UNVERIFIED" && !e.verified && !e.verification_requested_at);
+    return textMatches && stateMatches;
+  }).sort((a, b) => sort === "name"
+    ? (a.company_name || a.name).localeCompare(b.company_name || b.name)
+    : sort === "email" ? a.email.localeCompare(b.email)
+    : (b.verification_requested_at ?? "").localeCompare(a.verification_requested_at ?? ""));
   const requested = rows.filter((e) => e.verification_requested_at && !e.verified).length;
 
   return (
@@ -85,8 +108,10 @@ export default function AdminEmployers() {
       <header><h1 className="text-2xl font-bold text-ink">{t("Жұмыс берушілер|Работодатели|Employers")} ({rows.length})</h1><p className="mt-1 text-sm text-mute">{t("Тексеруді күтіп тұрғаны|Ожидают проверки|Awaiting review")}: {requested}</p></header>
       {err && <p role="alert" className="rounded-xl bg-red-500/10 px-4 py-3 text-sm text-red-500">{err}</p>}
       {!verificationSchemaReady && <p className="rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-ink">{t("Жұмыс берушілер тізімі көрсетілді. Растау деректері мен әрекеттері үшін Supabase миграцияларын атауы бойынша ретімен орындаңыз.|Список работодателей показан. Чтобы включить проверку компаний и действия, примените миграции Supabase по порядку.|The employer list is available. Apply the Supabase migrations in filename order to enable verification details and actions.")}</p>}
+      <AdminListToolbar search={query} onSearch={setQuery} placeholder="Компания, аты немесе email бойынша іздеу|Поиск по компании, имени или email|Search company, name or email" sort={sort} onSort={setSort} sortOptions={[{ value: "request", label: "Өтінім күні|Дата заявки|Request date" }, { value: "name", label: "Компания аты|Название компании|Company name" }, { value: "email", label: "Email" }]} filters={<select className="inp min-w-0" value={filter} onChange={(e) => setFilter(e.target.value as EmployerFilter)} aria-label={t("Күй бойынша сүзу|Фильтр по статусу|Filter by status")}><option value="ALL">{t("Барлығы|Все|All")}</option><option value="PENDING">{t("Тексеруде|На проверке|Pending")}</option><option value="VERIFIED">{t("Расталған|Подтверждённые|Verified")}</option><option value="UNVERIFIED">{t("Расталмаған|Не подтверждены|Unverified")}</option><option value="BLOCKED">{t("Бұғатталған|Заблокированные|Blocked")}</option></select>} />
+      {loading && <AdminLoading />}
       <div className="grid gap-4">
-        {rows.map((e) => {
+        {filteredRows.map((e) => {
           const reviewPending = Boolean(e.verification_requested_at && !e.verified);
           return <article key={e.id} className="card grid gap-3 p-5">
             <header className="flex flex-wrap items-start justify-between gap-3">
@@ -122,7 +147,7 @@ export default function AdminEmployers() {
             </footer>
           </article>;
         })}
-        {rows.length === 0 && !err && <p className="text-mute">{t("Жұмыс берушілер жоқ.|Работодателей нет.|No employers found.")}</p>}
+        {filteredRows.length === 0 && !loading && !err && <p className="text-mute">{t("Жұмыс берушілер табылмады.|Работодатели не найдены.|No employers found.")}</p>}
       </div>
     </div>
   );

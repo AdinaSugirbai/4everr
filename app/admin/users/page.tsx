@@ -3,6 +3,8 @@
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Modal from "@/components/Modal";
+import AdminListToolbar from "@/components/AdminListToolbar";
+import AdminLoading from "@/components/AdminLoading";
 import { supabase } from "@/lib/supabase/client";
 import { useAuth, checkPassword, pwOk, type Role } from "@/lib/auth";
 import { useI18n } from "@/lib/i18n";
@@ -19,6 +21,7 @@ type Row = {
 };
 type View = "active" | "archived";
 type ArchiveSupport = "unknown" | "available" | "migration-required";
+type Sort = "newest" | "oldest" | "name" | "role";
 
 const ROLE_LABELS: Record<Role, string> = {
   CANDIDATE: "Кандидат|Кандидат|Candidate",
@@ -45,8 +48,11 @@ export default function AdminUsers() {
   const [count, setCount] = useState(0);
   const [q, setQ] = useState("");
   const [view, setView] = useState<View>("active");
+  const [roleFilter, setRoleFilter] = useState("ALL");
+  const [sort, setSort] = useState<Sort>("newest");
   const [archiveSupport, setArchiveSupport] = useState<ArchiveSupport>("unknown");
   const [page, setPage] = useState(0);
+  const [isLoading, setIsLoading] = useState(true);
   const [err, setErr] = useState<string | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
   const [archiveFor, setArchiveFor] = useState<Row | null>(null);
@@ -60,14 +66,18 @@ export default function AdminUsers() {
   const rules = checkPassword(pwValue);
 
   const load = useCallback(async () => {
+    setIsLoading(true);
     setErr(null);
     const client = supabase();
     let request = client
       .from("profiles")
       .select("id, name, email, role, banned, archived_at, created_at", { count: "exact" })
-      .order("created_at", { ascending: false })
       .range(page * PAGE_SIZE, page * PAGE_SIZE + PAGE_SIZE - 1);
     request = view === "archived" ? request.not("archived_at", "is", null) : request.is("archived_at", null);
+    if (roleFilter !== "ALL") request = request.eq("role", roleFilter);
+    if (sort === "name") request = request.order("name", { ascending: true });
+    else if (sort === "role") request = request.order("role", { ascending: true }).order("created_at", { ascending: false });
+    else request = request.order("created_at", { ascending: sort === "oldest" });
     const search = q.trim().replace(/[^\p{L}\p{N}@._+\-\s]/gu, " ").replace(/\s+/g, " ");
     if (search) request = request.or(`name.ilike.%${search}%,email.ilike.%${search}%`);
     let { data, error, count: total } = await request;
@@ -75,8 +85,11 @@ export default function AdminUsers() {
       let fallback = client
         .from("profiles")
         .select("id, name, email, role, banned, created_at", { count: "exact" })
-        .order("created_at", { ascending: false })
         .range(page * PAGE_SIZE, page * PAGE_SIZE + PAGE_SIZE - 1);
+      if (roleFilter !== "ALL") fallback = fallback.eq("role", roleFilter);
+      if (sort === "name") fallback = fallback.order("name", { ascending: true });
+      else if (sort === "role") fallback = fallback.order("role", { ascending: true }).order("created_at", { ascending: false });
+      else fallback = fallback.order("created_at", { ascending: sort === "oldest" });
       if (search) fallback = fallback.or(`name.ilike.%${search}%,email.ilike.%${search}%`);
       const result = await fallback;
       data = result.data?.map((row) => ({ ...row, archived_at: null })) ?? null;
@@ -88,11 +101,13 @@ export default function AdminUsers() {
     }
     if (error) {
       setErr(error.message);
+      setIsLoading(false);
       return;
     }
     setRows((data ?? []) as Row[]);
     setCount(total ?? 0);
-  }, [page, q, view]);
+    setIsLoading(false);
+  }, [page, q, roleFilter, sort, view]);
 
   useEffect(() => { void load(); }, [load]);
 
@@ -149,16 +164,22 @@ export default function AdminUsers() {
           <h1 className="text-2xl font-bold text-ink">{t("Пайдаланушылар|Пользователи|Users")}</h1>
           <p className="mt-1 text-sm text-mute">{count} · {t("аккаунт|аккаунтов|accounts")}</p>
         </div>
-        <label className="w-full max-w-sm">
-          <span className="sr-only">{t("Аты немесе email бойынша іздеу|Поиск по имени или email|Search by name or email")}</span>
-          <input
-            value={q}
-            onChange={(e) => { setQ(e.target.value); setPage(0); }}
-            placeholder={t("Аты немесе email бойынша іздеу|Поиск по имени или email|Search by name or email")}
-            className="inp"
-          />
-        </label>
       </div>
+
+      <AdminListToolbar
+        search={q}
+        onSearch={(value) => { setQ(value); setPage(0); }}
+        placeholder="Аты немесе email бойынша іздеу|Поиск по имени или email|Search by name or email"
+        sort={sort}
+        onSort={(value) => { setSort(value as Sort); setPage(0); }}
+        sortOptions={[
+          { value: "newest", label: "Жаңадан ескіге|Сначала новые|Newest first" },
+          { value: "oldest", label: "Ескіден жаңаға|Сначала старые|Oldest first" },
+          { value: "name", label: "Аты бойынша|По имени|By name" },
+          { value: "role", label: "Рөлі бойынша|По роли|By role" },
+        ]}
+        filters={<select className="inp min-w-0" value={roleFilter} onChange={(e) => { setRoleFilter(e.target.value); setPage(0); }} aria-label={t("Рөл бойынша сүзу|Фильтр по роли|Filter by role")}><option value="ALL">{t("Барлық рөл|Все роли|All roles")}</option>{Object.entries(ROLE_LABELS).map(([role, label]) => <option key={role} value={role}>{t(label)}</option>)}</select>}
+      />
 
       <div className="flex flex-wrap gap-2" role="tablist" aria-label={t("Аккаунт күйі|Статус аккаунта|Account status")}>
         <button type="button" role="tab" aria-selected={view === "active"} className={`btn ${view === "active" ? "btn-p" : "btn-s"}`} onClick={() => { setView("active"); setPage(0); }}>
@@ -172,6 +193,7 @@ export default function AdminUsers() {
       {archiveSupport === "migration-required" && <p className="rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-ink">{t("Аккаунттар тізімі көрсетіліп тұр. Мұрағаттау функциясын қосу үшін Supabase-тағы барлық жаңа migration файлдарын ретімен қолданыңыз.|Список аккаунтов отображается. Чтобы включить архивирование, примените все новые migration-файлы в Supabase по порядку.|The account list is available. Apply the new Supabase migrations in order to enable archiving.")}</p>}
 
       {err && <p role="alert" className="rounded-xl bg-red-500/10 px-4 py-3 text-sm text-red-500">{err}</p>}
+      {isLoading && <AdminLoading />}
 
       <div className="overflow-x-auto rounded-2xl border border-line bg-sf">
         <table className="w-full text-left text-sm">

@@ -3,6 +3,8 @@ import { Fragment, useCallback, useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase/client";
 import { deleteApplication, setAppStatus, type AppStatus } from "@/lib/admin";
 import { useI18n } from "@/lib/i18n";
+import AdminListToolbar from "@/components/AdminListToolbar";
+import AdminLoading from "@/components/AdminLoading";
 
 // The applicant's details are stored on the application itself, so no join with profiles is needed.
 type Row = {
@@ -34,17 +36,26 @@ export default function AdminApplications() {
   const [busy, setBusy] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [openId, setOpenId] = useState<string | null>(null);
+  const [query, setQuery] = useState("");
+  const [filter, setFilter] = useState("ALL");
+  const [sort, setSort] = useState("newest");
 
   const load = useCallback(async () => {
     setLoading(true);
-    const { data, error } = await supabase()
+    let request = supabase()
       .from("applications")
-      .select("id, name, email, phone, position, city, job_title, company, status, created_at, cover")
-      .order("created_at", { ascending: false });
+      .select("id, name, email, phone, position, city, job_title, company, status, created_at, cover");
+    if (filter !== "ALL") request = request.eq("status", filter);
+    const safeQuery = query.trim().replace(/[^\p{L}\p{N}@._+\-\s]/gu, " ").replace(/\s+/g, " ");
+    if (safeQuery) request = request.or(`name.ilike.%${safeQuery}%,email.ilike.%${safeQuery}%,position.ilike.%${safeQuery}%,job_title.ilike.%${safeQuery}%,company.ilike.%${safeQuery}%`);
+    if (sort === "name") request = request.order("name", { ascending: true });
+    else if (sort === "vacancy") request = request.order("job_title", { ascending: true });
+    else request = request.order("created_at", { ascending: sort === "oldest" });
+    const { data, error } = await request;
     setErr(error ? error.message : null);
     setRows((data ?? []) as Row[]);
     setLoading(false);
-  }, []);
+  }, [filter, query, sort]);
 
   useEffect(() => { load(); }, [load]);
 
@@ -84,7 +95,9 @@ export default function AdminApplications() {
           {t("Жаңарту|Обновить|Refresh")}
         </button>
       </div>
+      <AdminListToolbar search={query} onSearch={setQuery} placeholder="Үміткер, email немесе вакансия|Кандидат, email или вакансия|Candidate, email or vacancy" sort={sort} onSort={setSort} sortOptions={[{ value: "newest", label: "Жаңадан ескіге|Сначала новые|Newest first" }, { value: "oldest", label: "Ескіден жаңаға|Сначала старые|Oldest first" }, { value: "name", label: "Үміткер аты|Имя кандидата|Candidate name" }, { value: "vacancy", label: "Вакансия бойынша|По вакансии|By vacancy" }]} filters={<select className="inp min-w-0" value={filter} onChange={(e) => setFilter(e.target.value)} aria-label={t("Күй бойынша сүзу|Фильтр по статусу|Filter by status")}><option value="ALL">{t("Барлық күй|Все статусы|All statuses")}</option>{STATUSES.map((item) => <option key={item.v} value={item.v}>{t(item.label)}</option>)}</select>} />
       {err && <p className="rounded-xl bg-red-500/10 px-4 py-3 text-sm text-red-500">{err}</p>}
+      {loading && <AdminLoading />}
 
       <div className="overflow-x-auto rounded-2xl border border-line bg-sf">
         <table className="w-full text-left text-sm">
@@ -154,7 +167,7 @@ export default function AdminApplications() {
                 )}
               </Fragment>
             ))}
-            {rows.length === 0 && !err && (
+            {rows.length === 0 && !err && !loading && (
               <tr>
                 <td colSpan={6} className="px-4 py-6 text-center text-mute">
                   {loading ? t("Жүктелуде...|Загрузка...|Loading...") : t("Өтінім жоқ.|Заявок нет.|No applications.")}
