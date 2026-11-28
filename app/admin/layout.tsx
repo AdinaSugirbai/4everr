@@ -8,6 +8,7 @@ import {
   FiHome, FiLogOut, FiMap, FiMenu, FiMessageSquare, FiSettings, FiUser, FiUsers,
 } from "react-icons/fi";
 import AdminLoading from "@/components/AdminLoading";
+import LangSwitch from "@/components/LangSwitch";
 import { useAuth } from "@/lib/auth";
 import { useI18n } from "@/lib/i18n";
 
@@ -69,6 +70,9 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
         </nav>
 
         <div className="mt-auto border-t border-line pt-2">
+          <div className={`mb-2 px-1 transition-opacity ${expanded ? "opacity-100" : "pointer-events-none opacity-0"}`} aria-hidden={!expanded}>
+            <LangSwitch />
+          </div>
           <Link href="/admin/profile" aria-label={t("Әкімші профилі|Профиль администратора|Admin profile")} title={!expanded ? t("Әкімші профилі|Профиль администратора|Admin profile") : undefined} className={`flex h-11 items-center gap-3 rounded-xl px-2 text-sm ${path.startsWith("/admin/profile") ? "bg-brand text-white" : "text-ink hover:bg-soft"}`}>
             <FiUser className="ml-1 h-5 w-5 shrink-0" aria-hidden="true" />
             <span className={`min-w-0 truncate transition-opacity ${expanded ? "opacity-100" : "opacity-0"}`}>{user.email}</span>
