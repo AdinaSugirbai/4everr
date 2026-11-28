@@ -5,7 +5,6 @@ import { useCallback, useEffect, useState } from "react";
 import AdminLoading from "@/components/AdminLoading";
 import { supabase } from "@/lib/supabase/client";
 import { useI18n } from "@/lib/i18n";
-import { loadAssessmentEntries } from "@/lib/assessments";
 import type { Role } from "@/lib/auth";
 
 type UserRow = { id: string; name: string; email: string; role: Role; banned: boolean; created_at: string };
@@ -51,7 +50,7 @@ export default function AdminDashboard() {
   const loadStats = useCallback(async () => {
     const db = supabase();
     const head = { count: "exact" as const, head: true };
-    const [allUsers, candidates, employers, verified, blockedUsers, pendingEmployers, activeVacancies, pendingVacancies, allApplications, newApplications, directions, tests, surveys, recentUsers] = await Promise.all([
+    const [allUsers, candidates, employers, verified, blockedUsers, pendingEmployers, activeVacancies, pendingVacancies, allApplications] = await Promise.all([
       db.from("profiles").select("id", head),
       db.from("profiles").select("id", head).eq("role", "CANDIDATE"),
       db.from("profiles").select("id", head).eq("role", "EMPLOYER"),
@@ -61,29 +60,17 @@ export default function AdminDashboard() {
       db.from("vacancies").select("id", head).eq("status", "ACTIVE").eq("moderation", "APPROVED"),
       db.from("vacancies").select("id", head).eq("moderation", "PENDING"),
       db.from("applications").select("id", head),
-      db.from("applications").select("id", head).eq("status", "NEW"),
-      db.from("it_directions").select("id", head),
-      loadAssessmentEntries("test"),
-      loadAssessmentEntries("survey"),
-      db.from("profiles").select("id", head).gte("created_at", new Date(Date.now() - 30 * 86400000).toISOString()),
     ]);
-    const countOf = (result: { count: number | null; error: { message: string } | null }) => {
-      if (result.error) throw new Error(result.error.message);
-      return result.count ?? 0;
-    };
+    const countOf = (result: { count: number | null; error: { message: string } | null }) => result.error ? 0 : result.count ?? 0;
     setStats([
       { label: "Тіркелген аккаунттар|Зарегистрированные аккаунты|Registered accounts", value: countOf(allUsers), hint: "Барлық рөлдер|Все роли|All roles" },
       { label: "Кандидаттар|Кандидаты|Candidates", value: countOf(candidates), hint: "Кандидат рөлі|Роль кандидата|Candidate role" },
       { label: "Жұмыс берушілер|Работодатели|Employers", value: countOf(employers), hint: `${countOf(verified)} · ${t("расталған|подтверждены|verified")}` },
       { label: "Компанияны тексеру кезегі|Компании на проверке|Companies awaiting verification", value: countOf(pendingEmployers), hint: "Жұмыс беруші өтінімдері|Заявки работодателей|Employer requests" },
       { label: "Бұғатталған аккаунттар|Заблокированные аккаунты|Blocked accounts", value: countOf(blockedUsers), hint: "Әкімші тексеруі қажет|Требуют внимания администратора|Need admin attention" },
-      { label: "Соңғы 30 күндегі тіркелім|Регистрации за 30 дней|Sign-ups in last 30 days", value: countOf(recentUsers), hint: "Жаңа аккаунттар|Новые аккаунты|New accounts" },
       { label: "Белсенді вакансиялар|Активные вакансии|Active vacancies", value: countOf(activeVacancies), hint: "Жарияланған|Опубликованные|Published" },
       { label: "Тексерілетін вакансиялар|Вакансии на проверке|Vacancies awaiting review", value: countOf(pendingVacancies), hint: "Модерация кезегінде|В очереди модерации|In moderation queue" },
-      { label: "Өтінімдер|Заявки|Applications", value: countOf(allApplications), hint: `${countOf(newApplications)} · ${t("жаңа|новые|new")}` },
-      { label: "IT бағыттары|IT-направления|IT directions", value: countOf(directions), hint: "Сайттағы бағыттар|Направления сайта|Site categories" },
-      { label: "Белсенді тесттер|Активные тесты|Active tests", value: Object.values(tests).filter((entry) => entry.enabled).length, hint: "Тест материалдары|Материалы тестов|Test items" },
-      { label: "Белсенді сауалнамалар|Активные опросы|Active surveys", value: Object.values(surveys).filter((entry) => entry.enabled).length, hint: "Сауалнама материалдары|Материалы опросов|Survey items" },
+      { label: "Өтінімдер|Заявки|Applications", value: countOf(allApplications), hint: "Барлық өтінімдер|Все заявки|All applications" },
     ]);
   }, [t]);
 
@@ -120,8 +107,8 @@ export default function AdminDashboard() {
       {error && <p role="alert" className="rounded-xl bg-red-500/10 px-4 py-3 text-sm text-red-500">{error}</p>}
       {(loading || statsLoading) && <AdminLoading />}
 
-      <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5" aria-label={t("Жалпы статистика|Общая статистика|Overall statistics")}>
-        {stats.map((item) => <article key={item.label} className="rounded-2xl border border-line bg-sf p-4"><p className="text-xs text-mute">{t(item.label)}</p><p className="mt-2 text-3xl font-bold text-brand">{item.value.toLocaleString(locale)}</p><p className="mt-1 text-xs text-mute">{t(item.hint)}</p></article>)}
+      <section className="grid gap-2 sm:grid-cols-2 xl:grid-cols-4 2xl:grid-cols-7" aria-label={t("Жалпы статистика|Общая статистика|Overall statistics")}>
+        {stats.map((item) => <article key={item.label} className="rounded-xl border border-line bg-sf p-3"><p className="text-xs leading-4 text-mute">{t(item.label)}</p><p className="mt-1 text-xl font-bold text-brand">{item.value.toLocaleString(locale)}</p><p className="mt-1 text-[11px] leading-4 text-mute">{t(item.hint)}</p></article>)}
       </section>
 
       <section className="grid gap-4">
